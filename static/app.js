@@ -23,6 +23,7 @@ function getUserId() {
 const USER_ID = getUserId();
 let lastRecId = null;
 let testDriveTarget = null;
+let compareList = []; // [{vehicle, match_pct, rank}, ...] max 3
 
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.hidden = false;
@@ -146,6 +147,20 @@ function render(out) {
           $("#tdDate").min = new Date().toISOString().split("T")[0];
           $("#testDriveDlg").showModal();
           return;
+        } else if (a === "compare") {
+          const idx = compareList.findIndex((c) => c.vehicle.id === v.id);
+          if (idx !== -1) {
+            compareList.splice(idx, 1);
+            b.textContent = "⇄ Compare"; b.classList.remove("added");
+          } else if (compareList.length < 3) {
+            compareList.push({ vehicle: v, match_pct: r.match_pct, rank: r.rank });
+            logEvent("compare", v.id, r.rank);
+            b.textContent = "✓ Added"; b.classList.add("added");
+          } else {
+            toast("Remove a car first to add another");
+          }
+          updateCompareBar();
+          return;
         } else {
           logEvent(a, v.id, r.rank);
           toast(`${a[0].toUpperCase() + a.slice(1)}d`);
@@ -156,6 +171,87 @@ function render(out) {
     list.appendChild(li);
   });
 }
+
+function updateCompareBar() {
+  const n = compareList.length;
+  $("#compareBar").hidden = n === 0;
+  $("#compareBarLabel").textContent = n === 1 ? "1 car selected" : `Comparing ${n} cars`;
+}
+
+const FEATURE_LABELS = {
+  sunroof: "Sunroof", six_airbags: "6 airbags", adas: "ADAS",
+  android_auto: "Android Auto / CarPlay", auto_climate: "Auto climate",
+  ventilated_seats: "Ventilated seats", camera_360: "360° camera",
+  cruise_control: "Cruise control", wireless_charging: "Wireless charging",
+  connected_car: "Connected car",
+};
+
+function renderCompareDialog() {
+  const items = compareList;
+  const v = (i) => items[i].vehicle;
+
+  function numRow(label, getter, lowerBetter = false) {
+    const vals = items.map(getter);
+    const nums = vals.map(Number).filter((n) => !isNaN(n));
+    const best = nums.length ? (lowerBetter ? Math.min(...nums) : Math.max(...nums)) : null;
+    const cells = vals.map((val) => {
+      const isBest = best !== null && !isNaN(Number(val)) && Number(val) === best;
+      const display = val == null ? "—" : val;
+      return `<td>${isBest ? `<span class="cmp-best">${display}</span>` : display}</td>`;
+    }).join("");
+    return `<tr><td class="row-hdr">${label}</td>${cells}</tr>`;
+  }
+
+  function textRow(label, getter) {
+    return `<tr><td class="row-hdr">${label}</td>${items.map((item) =>
+      `<td>${getter(item)}</td>`).join("")}</tr>`;
+  }
+
+  const headers = items.map((item) =>
+    `<th>${item.vehicle.make} ${item.vehicle.model}<br><small style="color:var(--muted);font-weight:400">${item.vehicle.variant}</small></th>`
+  ).join("");
+
+  const featureRows = Object.entries(FEATURE_LABELS).map(([key, label]) =>
+    `<tr><td class="row-hdr">${label}</td>${items.map((item) =>
+      `<td style="color:${(item.vehicle.features || []).includes(key) ? "var(--accent)" : "var(--muted)"}">${
+        (item.vehicle.features || []).includes(key) ? "✓" : "—"}</td>`
+    ).join("")}</tr>`
+  ).join("");
+
+  $("#compareBody").innerHTML = `
+    <table class="cmp-table">
+      <thead><tr><th class="row-hdr"></th>${headers}</tr></thead>
+      <tbody>
+        ${numRow("Match %", (item) => item.match_pct)}
+        ${numRow("Price (₹ lakh)", (item) => item.vehicle.price_lakh?.toFixed(1), true)}
+        ${textRow("Body type", (item) => pretty(item.vehicle.body_type))}
+        ${textRow("Fuel", (item) => pretty(item.vehicle.fuel))}
+        ${textRow("Transmission", (item) => item.vehicle.transmission?.toUpperCase())}
+        ${numRow("Seats", (item) => item.vehicle.seats)}
+        ${numRow("Power (bhp)", (item) => item.vehicle.power_bhp)}
+        ${numRow("Boot (litres)", (item) => item.vehicle.boot_litres)}
+        ${numRow("Safety rating", (item) => item.vehicle.safety_rating)}
+        ${textRow("Efficiency", (item) => item.vehicle.fuel === "electric"
+          ? `${item.vehicle.range_km} km range`
+          : `${item.vehicle.mileage_kmpl} ${item.vehicle.fuel === "cng" ? "km/kg" : "km/l"}`)}
+        ${featureRows}
+      </tbody>
+    </table>`;
+  $("#compareDlg").showModal();
+}
+
+$("#compareViewBtn").onclick = () => {
+  if (compareList.length < 2) { toast("Add at least 2 cars to compare"); return; }
+  renderCompareDialog();
+};
+
+$("#compareClearBtn").onclick = () => {
+  compareList = [];
+  updateCompareBar();
+  document.querySelectorAll(".actions button[data-a=compare]").forEach((b) => {
+    b.textContent = "⇄ Compare"; b.classList.remove("added");
+  });
+};
 
 $("#bookingsBtn").onclick = async () => {
   const bookings = await api("/api/bookings/test-drive");

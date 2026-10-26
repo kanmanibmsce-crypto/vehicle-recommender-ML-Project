@@ -68,6 +68,18 @@
     </section>
   </main>
 
+  <div id="compareBar" class="compare-bar" hidden>
+    <span id="compareBarLabel"></span>
+    <button id="compareViewBtn" class="primary-sm">Compare</button>
+    <button id="compareClearBtn" class="ghost">Clear</button>
+  </div>
+
+  <dialog id="compareDlg">
+    <h2>Compare cars</h2>
+    <div id="compareBody" style="overflow-x:auto"></div>
+    <form method="dialog"><button class="ghost">Close</button></form>
+  </dialog>
+
   <dialog id="bookingsDlg">
     <h2>📅 Test drive bookings</h2>
     <div id="bookingsBody"></div>
