@@ -47,11 +47,18 @@ function chips(container, items, { multi = true, initial = [] } = {}) {
 const picked = (container) =>
   [...document.querySelectorAll(`${container} [aria-pressed=true]`)].map((b) => b.dataset.key);
 
-async function api(path, body) {
-  const res = await fetch(path, body ? {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+async function api(path, body, method) {
+  const m = method || (body ? "POST" : "GET");
+  const res = await fetch(path, (body !== undefined && body !== null) ? {
+    method: m, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   } : undefined);
-  if (!res.ok) throw new Error((await res.json()).detail?.[0]?.msg || res.statusText);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    const msg = Array.isArray(data.detail)
+      ? data.detail.map(e => `${e.loc?.slice(-1)[0] ?? ""}: ${e.msg}`).join("; ")
+      : (data.detail || res.statusText);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -71,8 +78,28 @@ async function init() {
   chips("#priorities", o.priorities.map((k) => ({ key: k, label: pretty(k) })), { initial: ["safety"] });
 }
 
+$("#searchForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = $("#searchQ").value.trim();
+  if (!q) return;
+  $("#status").textContent = "Searching…";
+  $("#parsedTags").hidden = true;
+  try {
+    const out = await api("/api/search", { user_id: USER_ID, q, k: 10 });
+    lastRecId = out.recommendation_id;
+    if (out.parsed_tags.length) {
+      $("#parsedTags").innerHTML = out.parsed_tags.map(t => `<span class="parsed-tag">${t}</span>`).join("");
+      $("#parsedTags").hidden = false;
+    }
+    render(out);
+  } catch (err) {
+    $("#status").textContent = "Search failed: " + err.message;
+  }
+});
+
 $("#prefs").addEventListener("submit", async (e) => {
   e.preventDefault();
+  $("#parsedTags").hidden = true;
   const seats = $("#minSeats").value;
   const prefs = {
     budget_min: parseFloat($("#budgetMin").value || 0),
@@ -242,7 +269,14 @@ function renderCompareDialog() {
 
 $("#compareViewBtn").onclick = () => {
   if (compareList.length < 2) { toast("Add at least 2 cars to compare"); return; }
-  renderCompareDialog();
+  try {
+    const dlg = $("#compareDlg");
+    if (dlg.open) dlg.close();
+    renderCompareDialog();
+  } catch (err) {
+    toast("Compare failed: " + err.message);
+    console.error("renderCompareDialog error:", err);
+  }
 };
 
 $("#compareClearBtn").onclick = () => {
@@ -255,23 +289,78 @@ $("#compareClearBtn").onclick = () => {
 
 $("#bookingsBtn").onclick = async () => {
   const bookings = await api("/api/bookings/test-drive");
+  const body = $("#bookingsBody");
   if (!bookings.length) {
-    $("#bookingsBody").innerHTML = `<p class="meta">No bookings yet.</p>`;
+    body.innerHTML = `<p class="meta">No bookings yet.</p>`;
   } else {
-    $("#bookingsBody").innerHTML = `
+    body.innerHTML = `
       <table class="bookings-table">
-        <thead><tr><th>Vehicle ID</th><th>Name</th><th>Phone</th><th>City</th><th>Date</th><th>Booked at</th></tr></thead>
+        <thead><tr>
+          <th class="td-center">Test drive taken</th>
+          <th>Vehicle</th><th>Name</th><th>Phone</th><th>City</th><th>Branch</th>
+          <th>Preferred date</th><th>Sales officer</th><th>Booked at</th>
+        </tr></thead>
         <tbody>${bookings.map((b) => `
-          <tr>
+          <tr data-bid="${b.id}">
+            <td class="td-center tick-cell">
+              <button class="tick-btn${b.completed ? " ticked" : ""}" data-bid="${b.id}" title="Toggle">
+                ${b.completed ? "✓" : "○"}
+              </button>
+              <button class="save-tick-btn" data-bid="${b.id}" hidden>Save</button>
+            </td>
             <td>${b.vehicle_id}</td>
             <td>${b.name}</td>
             <td>${b.phone}</td>
             <td>${b.city}</td>
+            <td>${b.branch || "—"}</td>
             <td>${b.preferred_date}</td>
+            <td><input class="td-input td-text" type="text" value="${b.sales_officer || ""}" placeholder="Enter name" data-field="sales_officer" /></td>
             <td>${new Date(b.ts * 1000).toLocaleString()}</td>
           </tr>`).join("")}
         </tbody>
       </table>`;
+
+    body.querySelectorAll(".tick-btn").forEach((btn) => {
+      btn.onclick = () => {
+        const nowTicked = !btn.classList.contains("ticked");
+        btn.classList.toggle("ticked", nowTicked);
+        btn.textContent = nowTicked ? "✓" : "○";
+        const saveBtn = btn.closest(".tick-cell").querySelector(".save-tick-btn");
+        saveBtn.hidden = false;
+      };
+    });
+
+    body.querySelectorAll(".save-tick-btn").forEach((saveBtn) => {
+      saveBtn.onclick = async () => {
+        const tickBtn = saveBtn.closest(".tick-cell").querySelector(".tick-btn");
+        const completed = tickBtn.classList.contains("ticked");
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving…";
+        try {
+          await api(`/api/bookings/test-drive/${saveBtn.dataset.bid}`, { completed }, "PATCH");
+          saveBtn.hidden = true;
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          toast(completed ? "Test drive marked as taken" : "Marked as not taken");
+        } catch (err) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "Save";
+          toast("Save failed: " + err.message);
+        }
+      };
+    });
+
+    body.querySelectorAll(".td-input").forEach((input) => {
+      input.onchange = async () => {
+        const row = input.closest("tr[data-bid]");
+        try {
+          await api(`/api/bookings/test-drive/${row.dataset.bid}`, { [input.dataset.field]: input.value || null }, "PATCH");
+          toast("Saved");
+        } catch (err) {
+          toast("Save failed: " + err.message);
+        }
+      };
+    });
   }
   $("#bookingsDlg").showModal();
 };
@@ -306,7 +395,9 @@ $("#testDriveForm").addEventListener("submit", async (e) => {
       name: $("#tdName").value,
       phone: $("#tdPhone").value,
       city: $("#tdCity").value,
+      branch: $("#tdBranch")?.value ?? "",
       preferred_date: $("#tdDate").value,
+      sales_officer: $("#tdSalesOfficer")?.value ?? "",
       recommendation_id: recId,
     });
     toast("Test drive booked!");
@@ -315,7 +406,7 @@ $("#testDriveForm").addEventListener("submit", async (e) => {
     $("#testDriveForm").reset();
     testDriveTarget = null;
   } catch (err) {
-    toast("Booking failed — try again");
+    toast("Booking failed: " + err.message);
   }
 });
 

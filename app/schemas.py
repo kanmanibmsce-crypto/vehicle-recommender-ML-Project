@@ -65,10 +65,30 @@ class TestDriveBookingIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     phone: str = Field(..., min_length=7, max_length=20)
     city: str = Field(..., min_length=1, max_length=100)
+    branch: str = Field("", max_length=100)
     preferred_date: str = Field(..., description="ISO date YYYY-MM-DD")
+    sales_officer: str = Field("", max_length=100)
+    taken_date: Optional[str] = Field(None, description="ISO date YYYY-MM-DD")
     recommendation_id: Optional[str] = None
+
+
+class TestDriveUpdateIn(BaseModel):
+    completed: Optional[bool] = None
+    sales_officer: Optional[str] = Field(None, max_length=100)
+    taken_date: Optional[str] = Field(None, description="ISO date YYYY-MM-DD or null to clear")
 
 
 class TestDriveBookingOut(BaseModel):
     id: int
     message: str
+
+
+class SearchRequest(BaseModel):
+    q: str = Field(..., min_length=1, max_length=200, description="Natural-language search query")
+    user_id: str = Field(..., min_length=1, max_length=64)
+    k: int = Field(10, ge=1, le=30)
+
+
+class SearchResponse(RecommendResponse):
+    query: str
+    parsed_tags: list[str]

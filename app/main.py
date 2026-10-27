@@ -11,8 +11,11 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config as C
 from .events import EventStore
+from .query_parser import parse_query
 from .recommender import Recommender, _clean
-from .schemas import EventIn, RecommendRequest, RecommendResponse, TestDriveBookingIn, TestDriveBookingOut
+from .schemas import (EventIn, RecommendRequest, RecommendResponse,
+                      SearchRequest, SearchResponse,
+                      TestDriveBookingIn, TestDriveBookingOut, TestDriveUpdateIn)
 
 
 def create_app(db_path=C.DB_PATH) -> FastAPI:
@@ -76,8 +79,22 @@ def create_app(db_path=C.DB_PATH) -> FastAPI:
         booking_id = store.book_test_drive(
             b.user_id, b.vehicle_id, b.name, b.phone, b.city,
             b.preferred_date, b.recommendation_id,
+            branch=b.branch, sales_officer=b.sales_officer, taken_date=b.taken_date,
         )
         return {"id": booking_id, "message": "Booking confirmed"}
+
+    @app.patch("/api/bookings/test-drive/{booking_id}", status_code=200)
+    def update_booking(booking_id: int, body: TestDriveUpdateIn):
+        store.update_test_drive(booking_id, **body.model_dump(exclude_unset=True))
+        return {"updated": True}
+
+    @app.post("/api/search", response_model=SearchResponse)
+    def search(req: SearchRequest):
+        prefs, tags = parse_query(req.q)
+        out = rec.recommend(prefs, user_id=req.user_id, k=req.k)
+        store.log_impressions(req.user_id, out["recommendation_id"],
+                              [r["vehicle"]["id"] for r in out["results"]])
+        return {**out, "query": req.q, "parsed_tags": tags}
 
     @app.get("/api/metrics")
     def metrics():

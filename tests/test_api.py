@@ -64,6 +64,7 @@ BOOKING = {
     "name": "Priya Sharma",
     "phone": "9876543210",
     "city": "Bangalore",
+    "branch": "Koramangala Showroom",
     "preferred_date": "2026-11-15",
 }
 
@@ -93,3 +94,72 @@ def test_book_test_drive_validation(client):
     # missing required 'name' field
     bad = {k: v for k, v in {**BOOKING, "vehicle_id": vid}.items() if k != "name"}
     assert client.post("/api/bookings/test-drive", json=bad).status_code == 422
+
+
+# -- natural-language search -----------------------------------------------
+
+def _search(client, q, **kw):
+    return client.post("/api/search", json={"q": q, "user_id": "test-user", "k": 5, **kw})
+
+
+def test_search_returns_results(client):
+    r = _search(client, "automatic SUV under 15 lakh with sunroof")
+    assert r.status_code == 200
+    data = r.json()
+    assert "results" in data and "parsed_tags" in data and "query" in data
+    assert any("15" in t for t in data["parsed_tags"])
+    assert any("SUV" in t for t in data["parsed_tags"])
+    assert any("Automatic" in t for t in data["parsed_tags"])
+    assert any("Sunroof" in t for t in data["parsed_tags"])
+
+
+def test_search_no_budget_still_works(client):
+    r = _search(client, "electric car")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["results"]) > 0
+    assert any("Electric" in t for t in data["parsed_tags"])
+
+
+def test_search_budget_range(client):
+    r = _search(client, "diesel sedan 10 to 14 lakh")
+    assert r.status_code == 200
+    data = r.json()
+    assert any("10" in t and "14" in t for t in data["parsed_tags"])
+    assert any("Diesel" in t for t in data["parsed_tags"])
+
+
+def test_search_empty_query_rejected(client):
+    assert _search(client, "").status_code == 422
+
+
+# -- test drive update (status / officer / taken date) ---------------------
+
+def test_update_test_drive_status(client):
+    vid = _first_vehicle_id(client)
+    booking_id = client.post("/api/bookings/test-drive",
+                             json={**BOOKING, "vehicle_id": vid}).json()["id"]
+    r = client.patch(f"/api/bookings/test-drive/{booking_id}",
+                     json={"completed": True, "sales_officer": "Rahul Kumar",
+                           "taken_date": "2026-11-16"})
+    assert r.status_code == 200 and r.json()["updated"] is True
+    bookings = client.get("/api/bookings/test-drive").json()
+    b = next(x for x in bookings if x["id"] == booking_id)
+    assert b["completed"] == 1
+    assert b["sales_officer"] == "Rahul Kumar"
+    assert b["taken_date"] == "2026-11-16"
+    assert b["branch"] == "Koramangala Showroom"
+
+
+def test_update_partial_fields(client):
+    vid = _first_vehicle_id(client)
+    booking_id = client.post("/api/bookings/test-drive",
+                             json={**BOOKING, "vehicle_id": vid}).json()["id"]
+    # Only update sales_officer; completed and taken_date must stay at defaults
+    client.patch(f"/api/bookings/test-drive/{booking_id}",
+                 json={"sales_officer": "Anita Rao"})
+    b = next(x for x in client.get("/api/bookings/test-drive").json()
+             if x["id"] == booking_id)
+    assert b["sales_officer"] == "Anita Rao"
+    assert b["completed"] == 0
+    assert b["taken_date"] is None

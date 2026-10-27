@@ -34,11 +34,23 @@ CREATE TABLE IF NOT EXISTS test_drive_bookings (
     name            TEXT    NOT NULL,
     phone           TEXT    NOT NULL,
     city            TEXT    NOT NULL,
+    branch          TEXT,
     preferred_date  TEXT    NOT NULL,
     recommendation_id TEXT,
-    ts              REAL    NOT NULL
+    ts              REAL    NOT NULL,
+    completed       INTEGER DEFAULT 0,
+    sales_officer   TEXT,
+    taken_date      TEXT
 );
 """
+
+# Columns added after the initial release — applied once on startup for existing DBs.
+_MIGRATIONS = [
+    "ALTER TABLE test_drive_bookings ADD COLUMN branch TEXT",
+    "ALTER TABLE test_drive_bookings ADD COLUMN completed INTEGER DEFAULT 0",
+    "ALTER TABLE test_drive_bookings ADD COLUMN sales_officer TEXT",
+    "ALTER TABLE test_drive_bookings ADD COLUMN taken_date TEXT",
+]
 
 
 class EventStore:
@@ -46,6 +58,11 @@ class EventStore:
         self.db_path = str(db_path)
         with self._conn() as con:
             con.executescript(SCHEMA)
+            for sql in _MIGRATIONS:
+                try:
+                    con.execute(sql)
+                except sqlite3.OperationalError:
+                    pass  # column already exists
 
     @contextmanager
     def _conn(self):
@@ -99,33 +116,46 @@ class EventStore:
         return pop
 
     def book_test_drive(self, user_id, vehicle_id, name, phone, city, preferred_date,
-                        recommendation_id=None):
+                        recommendation_id=None, branch=None,
+                        sales_officer=None, taken_date=None):
         with self._conn() as con:
             cur = con.execute(
                 "INSERT INTO test_drive_bookings"
-                " (user_id, vehicle_id, name, phone, city, preferred_date, recommendation_id, ts)"
-                " VALUES (?,?,?,?,?,?,?,?)",
-                (user_id, vehicle_id, name, phone, city, preferred_date,
-                 recommendation_id, time.time()),
+                " (user_id, vehicle_id, name, phone, city, branch, preferred_date,"
+                "  recommendation_id, ts, sales_officer, taken_date)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                (user_id, vehicle_id, name, phone, city, branch, preferred_date,
+                 recommendation_id, time.time(),
+                 sales_officer or None, taken_date or None),
             )
             booking_id = cur.lastrowid
         self.log(user_id, "test_drive", vehicle_id=vehicle_id,
                  recommendation_id=recommendation_id)
         return booking_id
 
+    def update_test_drive(self, booking_id: int, **kwargs) -> None:
+        allowed = {"completed", "sales_officer", "taken_date"}
+        fields = {k: v for k, v in kwargs.items() if k in allowed}
+        if not fields:
+            return
+        set_clause = ", ".join(f"{k}=?" for k in fields)
+        with self._conn() as con:
+            con.execute(
+                f"UPDATE test_drive_bookings SET {set_clause} WHERE id=?",
+                (*fields.values(), booking_id),
+            )
+
     def get_test_drive_bookings(self, vehicle_id=None) -> list[dict]:
-        cols = ["id", "user_id", "vehicle_id", "name", "phone", "city",
-                "preferred_date", "recommendation_id", "ts"]
+        cols = ("id", "user_id", "vehicle_id", "name", "phone", "city", "branch",
+                "preferred_date", "recommendation_id", "ts",
+                "completed", "sales_officer", "taken_date")
+        select = f"SELECT {', '.join(cols)} FROM test_drive_bookings"
         with self._conn() as con:
             if vehicle_id is not None:
-                rows = con.execute(
-                    "SELECT * FROM test_drive_bookings WHERE vehicle_id=? ORDER BY ts DESC",
-                    (vehicle_id,),
-                ).fetchall()
+                rows = con.execute(select + " WHERE vehicle_id=? ORDER BY ts DESC",
+                                   (vehicle_id,)).fetchall()
             else:
-                rows = con.execute(
-                    "SELECT * FROM test_drive_bookings ORDER BY ts DESC"
-                ).fetchall()
+                rows = con.execute(select + " ORDER BY ts DESC").fetchall()
         return [dict(zip(cols, r)) for r in rows]
 
     def metrics(self) -> dict:

@@ -15,9 +15,18 @@ body { margin: 0; background: var(--bg); color: var(--ink); }
 .brand { font-weight: 700; letter-spacing: .2px; } .logo { color: var(--accent); }
 .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; padding: 24px; max-width: 1200px; margin: 0 auto; }
 @media (max-width: 860px) { .layout { grid-template-columns: 1fr; padding: 16px; } }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px;
-  align-self: start; position: sticky; top: 76px; max-height: calc(100vh - 100px); overflow: auto; }
-@media (max-width: 860px) { .panel { position: static; max-height: none; } }
+.left-col { display: flex; flex-direction: column; gap: 14px; align-self: start;
+  position: sticky; top: 76px; max-height: calc(100vh - 100px); overflow: auto; }
+@media (max-width: 860px) { .left-col { position: static; max-height: none; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+.search-panel { padding: 12px 16px; }
+.search-row { display: flex; gap: 8px; }
+.search-input { flex: 1; min-width: 0; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--bg); color: var(--ink); font-size: .9rem; }
+.search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.parsed-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.parsed-tag { background: var(--accent-soft); color: var(--accent); padding: 4px 10px;
+  border-radius: 99px; font-size: .8rem; font-weight: 600; }
 h1 { font-size: 1.35rem; margin: 0 0 4px; } .sub { color: var(--muted); margin: 0 0 12px; font-size: .9rem; }
 fieldset { border: 0; padding: 0; margin: 16px 0 0; }
 legend { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
@@ -55,7 +64,7 @@ button.ghost { border: 1px solid var(--line); background: transparent; color: va
 .actions button.done { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
 .actions .spacer { flex: 1; }
 dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink);
-  max-width: 720px; width: calc(100% - 32px); }
+  max-width: 720px; width: calc(100% - 32px); padding: 20px; max-height: 85vh; overflow-y: auto; }
 .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
 .kpi { border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
 .kpi b { font-size: 1.4rem; display: block; } .kpi span { color: var(--muted); font-size: .8rem; }
@@ -80,5 +89,20 @@ button.primary-sm { background: var(--accent); color: var(--accent-ink); border:
 .bookings-table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 8px; }
 .bookings-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 6px 10px;
   border-bottom: 1px solid var(--line); white-space: nowrap; }
-.bookings-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.bookings-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 .bookings-table tr:last-child td { border-bottom: 0; }
+.td-input { border: 1px solid var(--line); border-radius: 6px; padding: 4px 7px;
+  background: var(--bg); color: var(--ink); font-size: .82rem; }
+.td-input:focus { outline: 1px solid var(--accent); border-color: transparent; }
+.td-text { width: 130px; }
+.td-center { text-align: center; }
+.tick-cell { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.tick-btn { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line);
+  background: var(--bg); color: var(--muted); font-size: 1rem; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; transition: all .15s; flex-shrink: 0; }
+.tick-btn:hover { border-color: var(--accent); color: var(--accent); }
+.tick-btn.ticked { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.save-tick-btn { background: var(--accent); color: var(--accent-ink); border: 0;
+  padding: 5px 10px; border-radius: 7px; font-size: .78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.save-tick-btn:disabled { opacity: .6; cursor: default; }
+#bookingsDlg { max-width: 980px; }
