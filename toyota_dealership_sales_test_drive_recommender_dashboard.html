@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#F4F6F9]">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toyota DriveMatch Enterprise - Dealership Sales & Test Drive OS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        toyota: {
+                            red: '#EB0A1E',
+                            darkRed: '#C20818',
+                            lightRed: '#FDF2F3',
+                            black: '#111827',
+                            darkSlate: '#1E293B',
+                            lightBg: '#F4F6F9',
+                            border: '#E2E8F0',
+                        },
+                        brand: {
+                            50: '#fdf2f2',
+                            100: '#fde8e8',
+                            500: '#eb0a1e',
+                            600: '#d90417',
+                            700: '#b80212',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04)',
+                        'elevated': '0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F4F6F9;
+            color: #1E293B;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94A3B8;
+        }
+
+        .toyota-badge-glow {
+            animation: toyotaGlow 2.5s infinite ease-in-out;
+        }
+        @keyframes toyotaGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(235, 10, 30, 0.35); }
+            50% { box-shadow: 0 0 0 8px rgba(235, 10, 30, 0); }
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col overflow-hidden select-none">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none w-80"></div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="flex h-screen w-screen overflow-hidden bg-[#F4F6F9]">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-all duration-300 z-30 shrink-0">
+            <div>
+                <!-- Toyota Corporate Header -->
+                <div class="h-16 px-5 border-b border-slate-200 flex items-center justify-between bg-white">
+                    <div class="flex items-center gap-3">
+                        <!-- Official Toyota SVG Logo Emblem -->
+                        <div class="w-10 h-10 rounded-xl bg-toyota-red flex items-center justify-center text-white shadow-md shadow-toyota-red/20 shrink-0">
+                            <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 2c4.41 0 8 3.59 8 8s-3.59 8-8 8-8-3.59-8-8 3.59-8 8-8zm0 1.5c-3.31 0-6 1.79-6 4s2.69 4 6 4 6-1.79 6-4-2.69-4-6-4zm0 1c2.21 0 4 .9 4 2s-1.79 2-4 2-4-.9-4-2 1.79-2 4-2zm0 4.5c-1.38 0-2.5.67-2.5 1.5s1.12 1.5 2.5 1.5 2.5-.67 2.5-1.5-1.12-1.5-2.5-1.5z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="font-extrabold text-base tracking-tight text-slate-900 block leading-none">TOYOTA</span>
+                            <span class="text-[10px] font-bold tracking-widest text-toyota-red uppercase">DriveMatch OS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="p-3 space-y-1">
+                    <p class="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Sales & Drive Engine</p>
+                    
+                    <button onclick="switchTab('recommender')" id="nav-recommender" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition bg-toyota-lightRed text-toyota-red border border-red-100">
+                        <i class="fa-solid fa-wand-magic-sparkles w-4 text-center"></i>
+                        <span>Toyota AI Recommender</span>
+                        <span class="ml-auto bg-toyota-red text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Core</span>
+                    </button>
+
+                    <button onclick="switchTab('leads')" id="nav-leads" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-users-viewfinder w-4 text-center"></i>
+                        <span>Showroom Leads</span>
+                        <span class="ml-auto bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">4 Active</span>
+                    </button>
+
+                    <button onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-car-side w-4 text-center"></i>
+                        <span>Test Drive Fleet</span>
+                        <span class="ml-auto bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">9 Ready</span>
+                    </button>
+
+                    <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-calendar-check w-4 text-center"></i>
+                        <span>Drive Calendar</span>
+                    </button>
+
+                    <p class="px-3 pt-4 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Performance</p>
+                    
+                    <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-chart-pie w-4 text-center"></i>
+                        <span>Dealership Analytics</span>
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Sales Representative & Dealership Badge -->
+            <div class="p-4 border-t border-slate-200 bg-slate-50/50">
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-card mb-3">
+                    <div class="flex justify-between items-center text-[11px] text-slate-500 mb-1">
+                        <span>Toyota Sales Goal</span>
+                        <span class="font-bold text-toyota-red">22/28 Units</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="bg-toyota-red h-full rounded-full" style="width: 78%"></div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" alt="Toyota Advisor" class="w-9 h-9 rounded-xl object-cover border border-slate-300 shrink-0">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-slate-900 truncate">Sarah Jenkins</p>
+                        <p class="text-[10px] text-slate-500 truncate">Certified Toyota Sales Pro</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+            
+            <!-- TOP BAR -->
+            <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0">
+                <div class="flex items-center gap-4 flex-1 max-w-xl">
+                    <div class="relative w-full">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="global-search" placeholder="Search customer, Toyota Stock #, VIN, or License Plate..." class="w-full bg-slate-100 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-toyota-red focus:bg-white transition">
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <!-- Toyota Safety Sense Badge Indicator -->
+                    <div class="hidden lg:flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700">
+                        <i class="fa-solid fa-shield-halved text-toyota-red"></i>
+                        <span>Toyota Safety Sense 3.0 Active</span>
+                    </div>
+
+                    <div class="h-6 w-px bg-slate-200 mx-1"></div>
+
+                    <!-- New Lead Action -->
+                    <button onclick="loadLead('walkin')" class="bg-toyota-red hover:bg-toyota-darkRed text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>New Customer Check-in</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- WORKSPACE CANVAS -->
+            <main class="flex-1 overflow-y-auto p-6 bg-[#F4F6F9]" id="main-workspace">
+                
+                <!-- ================= TAB 1: TOYOTA AI RECOMMENDER ================= -->
+                <section id="tab-recommender" class="space-y-6">
+                    
+                    <!-- Customer Profile Banner -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-card flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-toyota-lightRed text-toyota-red flex items-center justify-center text-lg font-bold">
+                                <i class="fa-solid fa-address-card"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Customer Profile:</span>
+                                    <span id="active-lead-name" class="font-extrabold text-slate-900 text-sm">Marcus & Elena Vance</span>
+                                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">In Showroom</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-0.5">Looking for: 3-Row SUV / Hybrid Synergy Drive / AWD</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-500">Quick Profile Selector:</span>
+                            <button onclick="loadLead('vance')" class="px-3 py-1.5 rounded-xl border border-red-200 bg-red-50 text-toyota-red font-bold text-xs hover:bg-red-100 transition">
+                                Vance Family (SUV/Hybrid)
+                            </button>
+                            <button onclick="loadLead('chen')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                                Dr. Chen (Executive Crown)
+                            </button>
+                            <button onclick="loadLead('miller')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                                Jake Miller (Tacoma 4x4)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 2-COLUMN MATCHING MATRIX LAYOUT -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        
+                        <!-- LEFT PANEL: CUSTOMER REQUIREMENT QUESTIONNAIRE (5 Cols) -->
+                        <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-card space-y-5 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                                    <div>
+                                        <h3 class="font-bold text-base text-slate-900">1. Customer Criteria & Needs</h3>
+                                        <p class="text-xs text-slate-500">Filters match live Toyota inventory & demo fleet</p>
+                                    </div>
+                                    <button onclick="resetFilters()" class="text-xs font-semibold text-slate-400 hover:text-slate-600">Reset</button>
+                                </div>
+
+                                <div class="space-y-4 pt-4 text-xs">
+                                    <!-- Target Price / Monthly Budget -->
+                                    <div>
+                                        <div class="flex justify-between font-bold text-slate-700 mb-1">
+                                            <span>Target Price Budget</span>
+                                            <span id="budget-val" class="text-toyota-red font-extrabold">$35,000 - $52,000 MSRP</span>
+                                        </div>
+                                        <input type="range" id="input-budget" min="25000" max="80000" step="2500" value="48000" oninput="updateCalculations()" class="w-full accent-toyota-red cursor-pointer">
+                                        <div class="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                                            <span>$25k (Corolla/Camry)</span>
+                                            <span>$48k (RAV4/Grand Highlander)</span>
+                                            <span>$80k+ (Sequoia)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Toyota Powertrain Preference -->
+                                    <div>
+                                        <label class="font-bold text-slate-700 block mb-1.5">Toyota Powertrain Technology</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <button onclick="setPowertrain('Hybrid', this)" class="ptrain-btn p-2 rounded-xl border-2 border-toyota-red bg-toyota-lightRed font-bold text-toyota-red text-center">Hybrid Synergy Drive</button>
+                                            <button onclick="setPowertrain('PHEV', this)" class="ptrain-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-600 hover:bg-slate-100 text-center">Plug-in Prime</button>
+                                            <button onclick="setPowertrain('bZ EV', this)" class="ptrain-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-600 hover:bg-slate-100 text-center">bZ Pure EV</button>
+                                            <button onclick="setPowertrain('i-FORCE', this)" class="ptrain-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-600 hover:bg-slate-100 text-center">i-FORCE MAX Turbo</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Seating Capacity & Primary Use -->
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="font-bold text-slate-700 block mb-1">Seating Capacity</label>
+                                            <select id="input-seats" onchange="updateCalculations()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-toyota-red">
+                                                <option value="5">5 Passengers</option>
+                                                <option value="7" selected>7 Passengers (3rd Row)</option>
+                                                <option value="8">8 Passengers (Full SUV)</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label class="font-bold text-slate-700 block mb-1">Primary Lifestyle Use</label>
+                                            <select id="input-use" onchange="updateCalculations()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-toyota-red">
+                                                <option value="family" selected>Family Commute & Roadtrip</option>
+                                                <option value="city">Urban Daily Commute</option>
+                                                <option value="offroad">Off-Road & Towing 4x4</option>
+                                                <option value="executive">Executive / Premium Sedan</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Key Toyota Feature Checkboxes -->
+                                    <div>
+                                        <label class="font-bold text-slate-700 block mb-1.5">Must-Have Toyota Features</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
+                                                <input type="checkbox" id="feat-awd" checked onchange="updateCalculations()" class="rounded text-toyota-red focus:ring-0">
+                                                <span class="font-semibold text-slate-700">Electronic AWD / 4WD</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
+                                                <input type="checkbox" id="feat-tss" checked onchange="updateCalculations()" class="rounded text-toyota-red focus:ring-0">
+                                                <span class="font-semibold text-slate-700">Safety Sense 3.0</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
+                                                <input type="checkbox" id="feat-jbl" checked onchange="updateCalculations()" class="rounded text-toyota-red focus:ring-0">
+                                                <span class="font-semibold text-slate-700">JBL Premium Audio</span>
+                                            </label>
+                                            <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer hover:bg-slate-100">
+                                                <input type="checkbox" id="feat-tow" onchange="updateCalculations()" class="rounded text-toyota-red focus:ring-0">
+                                                <span class="font-semibold text-slate-700">5,000+ lbs Towing</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-100">
+                                <button onclick="runAIMatchingAnimation()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-arrows-rotate" id="ai-spin-icon"></i>
+                                    <span>Recalculate Toyota AI Recommendations</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT PANEL: RECOMMENDED TOYOTA VEHICLE CARDS (7 Cols) -->
+                        <div class="lg:col-span-7 space-y-4">
+                            
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="font-bold text-base text-slate-900">2. Optimal Toyota Models for Test Drive</h3>
+                                    <p class="text-xs text-slate-500">Calculated against live dealership demo inventory</p>
+                                </div>
+
+                                <button onclick="toggleCompareModal()" class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-code-compare text-toyota-red"></i>
+                                    <span>Compare Top Models</span>
+                                </button>
+                            </div>
+
+                            <!-- RECOMMENDED VEHICLE LIST CONTAINER -->
+                            <div id="vehicle-cards-container" class="space-y-4">
+                                <!-- Cards populated by JavaScript -->
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- ================= TAB 2: SHOWROOM LEADS ================= -->
+                <section id="tab-leads" class="space-y-6 hidden">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-slate-900">Showroom Check-Ins & Digital Appointments</h3>
+                                <p class="text-xs text-slate-500">Live guest queue with matched vehicle preferences</p>
+                            </div>
+                            <span class="bg-toyota-lightRed text-toyota-red font-bold text-xs px-3 py-1 rounded-lg border border-red-100">4 In Dealership Lounge</span>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest border-b border-slate-200">
+                                        <th class="py-3 px-4">Guest Name</th>
+                                        <th class="py-3 px-4">Check-In Type</th>
+                                        <th class="py-3 px-4">Budget / Target</th>
+                                        <th class="py-3 px-4">AI Matched Model</th>
+                                        <th class="py-3 px-4">Driver's License</th>
+                                        <th class="py-3 px-4 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 text-xs">
+                                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="loadLead('vance'); switchTab('recommender');">
+                                        <td class="py-3.5 px-4 font-bold text-slate-900">
+                                            Marcus & Elena Vance
+                                            <span class="block text-[10px] text-slate-400 font-normal">Showroom Floor • 10 mins ago</span>
+                                        </td>
+                                        <td class="py-3.5 px-4"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[10px] font-bold">Front Desk</span></td>
+                                        <td class="py-3.5 px-4 font-bold text-slate-800">$48,000 • 7-Seat Hybrid</td>
+                                        <td class="py-3.5 px-4 text-toyota-red font-bold">Toyota Grand Highlander (98% Match)</td>
+                                        <td class="py-3.5 px-4"><span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">Verified</span></td>
+                                        <td class="py-3.5 px-4 text-right">
+                                            <button class="bg-toyota-red text-white font-bold px-3 py-1 rounded-lg text-xs">Load Recommender</button>
+                                        </td>
+                                    </tr>
+                                    <tr class="hover:bg-slate-50 transition cursor-pointer" onclick="loadLead('chen'); switchTab('recommender');">
+                                        <td class="py-3.5 px-4 font-bold text-slate-900">
+                                            Dr. Aris Chen
+                                            <span class="block text-[10px] text-slate-400 font-normal">VIP Appointment • 2:00 PM</span>
+                                        </td>
+                                        <td class="py-3.5 px-4"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold">Toyota.com VIP</span></td>
+                                        <td class="py-3.5 px-4 font-bold text-slate-800">$55,000 • Executive Sedan</td>
+                                        <td class="py-3.5 px-4 text-toyota-red font-bold">Toyota Crown Platinum (95% Match)</td>
+                                        <td class="py-3.5 px-4"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold">Pending Scan</span></td>
+                                        <td class="py-3.5 px-4 text-right">
+                                            <button class="bg-slate-100 text-slate-700 font-bold px-3 py-1 rounded-lg text-xs">View Details</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 3: DEMO FLEET STATUS ================= -->
+                <section id="tab-fleet" class="space-y-6 hidden">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                            <p class="text-xs font-semibold text-slate-400 uppercase">Available Toyota Demo Fleet</p>
+                            <h3 class="text-2xl font-black text-slate-900 mt-1">12 Demo Vehicles</h3>
+                            <p class="text-[11px] text-emerald-600 font-semibold mt-1">9 Clean & Sanitized in Bay</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                            <p class="text-xs font-semibold text-slate-400 uppercase">Currently On Road</p>
+                            <h3 class="text-2xl font-black text-toyota-red mt-1">2 Vehicles</h3>
+                            <p class="text-[11px] text-slate-500 font-semibold mt-1">Avg Test Drive: 16 Mins</p>
+                        </div>
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                            <p class="text-xs font-semibold text-slate-400 uppercase">In Detail / Fueling Stall</p>
+                            <h3 class="text-2xl font-black text-amber-600 mt-1">1 Vehicle</h3>
+                            <p class="text-[11px] text-amber-600 font-semibold mt-1">RAV4 Prime (Level 2 Charging)</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <h3 class="font-bold text-base text-slate-900 mb-4">Toyota Fleet Inventory & Key Location</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex justify-between items-center">
+                                <div>
+                                    <span class="text-[10px] font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">Key Box Tag #201 • Ready</span>
+                                    <h4 class="font-bold text-slate-900 text-sm mt-1">Grand Highlander Hybrid</h4>
+                                    <p class="text-xs text-slate-500">Wind Chill Pearl • Stock #TY-8802</p>
+                                </div>
+                                <i class="fa-solid fa-circle-check text-emerald-500 text-xl"></i>
+                            </div>
+
+                            <div class="p-4 rounded-xl border border-red-200 bg-red-50/40 flex justify-between items-center">
+                                <div>
+                                    <span class="text-[10px] font-extrabold text-toyota-red bg-red-100 px-2 py-0.5 rounded">Key Box Tag #204 • On Trail Route</span>
+                                    <h4 class="font-bold text-slate-900 text-sm mt-1">Tacoma TRD Off-Road</h4>
+                                    <p class="text-xs text-slate-500">Driver: Customer Marcus V. (ETA 6m)</p>
+                                </div>
+                                <i class="fa-solid fa-car-side text-toyota-red text-xl"></i>
+                            </div>
+
+                            <div class="p-4 rounded-xl border border-amber-200 bg-amber-50/40 flex justify-between items-center">
+                                <div>
+                                    <span class="text-[10px] font-extrabold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">Key Box Tag #208 • Charging</span>
+                                    <h4 class="font-bold text-slate-900 text-sm mt-1">Toyota bZ4X EV Limited</h4>
+                                    <p class="text-xs text-slate-500">82% Battery • Stall 1 Fast Charge</p>
+                                </div>
+                                <i class="fa-solid fa-charging-station text-amber-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 4: DRIVE CALENDAR ================= -->
+                <section id="tab-schedule" class="space-y-6 hidden">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-base font-bold text-slate-900">Today's Toyota Test Drive Schedule</h3>
+                            <span class="text-xs font-semibold text-slate-500">October 29, 2026</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-toyota-lightRed text-toyota-red flex items-center justify-center font-black text-xs">10:30 AM</div>
+                                    <div>
+                                        <p class="font-bold text-xs text-slate-900">Marcus Vance • Toyota Grand Highlander Hybrid</p>
+                                        <p class="text-[11px] text-slate-500">Route: Highway Loop (20 Mins) • Key Tag #201</p>
+                                    </div>
+                                </div>
+                                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full">Driver's License Verified</span>
+                            </div>
+
+                            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-200 text-slate-700 flex items-center justify-center font-black text-xs">02:00 PM</div>
+                                    <div>
+                                        <p class="font-bold text-xs text-slate-900">Dr. Aris Chen • Toyota Crown Platinum</p>
+                                        <p class="text-[11px] text-slate-500">Route: City Commute (15 Mins) • Key Tag #205</p>
+                                    </div>
+                                </div>
+                                <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full">Awaiting License Scan</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ================= TAB 5: ANALYTICS ================= -->
+                <section id="tab-analytics" class="space-y-6 hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Top Test Driven Toyota Models -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                            <h3 class="font-bold text-base text-slate-900 mb-1">Most Requested Toyota Test Drive Models</h3>
+                            <p class="text-xs text-slate-500 mb-4">Current month volume across showroom walk-ins</p>
+                            <div class="h-64">
+                                <canvas id="toyotaModelChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Funnel -->
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                            <h3 class="font-bold text-base text-slate-900 mb-1">Test Drive to Dealership Close Ratio</h3>
+                            <p class="text-xs text-slate-500 mb-4">Conversion performance powered by Toyota AI Matcher</p>
+                            <div class="h-64">
+                                <canvas id="conversionFunnelChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- SIDE-BY-SIDE MODEL COMPARE MODAL -->
+    <div id="compare-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-4xl rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Toyota Side-by-Side Model Comparison</h3>
+                    <p class="text-xs text-slate-500">Matching criteria for Marcus &amp; Elena Vance</p>
+                </div>
+                <button onclick="toggleCompareModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 text-xs" id="compare-grid">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- TEST DRIVE SCHEDULER & LICENSE SCANNER MODAL -->
+    <div id="schedule-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-toyota-lightRed text-toyota-red flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-id-card"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Book Toyota Test Drive</h3>
+                        <p id="modal-vehicle-title" class="text-xs text-toyota-red font-bold">Toyota Grand Highlander Hybrid</p>
+                    </div>
+                </div>
+                <button onclick="closeScheduleModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <!-- Step 1: Customer Details -->
+                <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                    <div class="flex justify-between font-bold text-slate-800">
+                        <span>Customer Name:</span>
+                        <span id="modal-customer-name">Marcus Vance</span>
+                    </div>
+                    <div class="flex justify-between text-slate-500">
+                        <span>Contact Phone:</span>
+                        <span>(555) 382-9011</span>
+                    </div>
+                </div>
+
+                <!-- Step 2: Test Drive Route Selector -->
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Select Test Drive Route</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="p-2.5 rounded-xl border-2 border-toyota-red bg-toyota-lightRed cursor-pointer text-center block">
+                            <span class="font-bold text-toyota-red block">Highway Loop</span>
+                            <span class="text-[10px] text-slate-500">20 Mins (Speed/AWD)</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer text-center block hover:bg-slate-100">
+                            <span class="font-bold text-slate-700 block">City Commute</span>
+                            <span class="text-[10px] text-slate-500">15 Mins (Comfort/MPG)</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer text-center block hover:bg-slate-100">
+                            <span class="font-bold text-slate-700 block">AWD Trail</span>
+                            <span class="text-[10px] text-slate-500">25 Mins (Terrain)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Step 3: Driver's License Upload / Scanner -->
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Driver's License Verification</label>
+                    <div id="license-dropzone" onclick="simulateLicenseScan()" class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:border-toyota-red hover:bg-red-50/30 transition">
+                        <i class="fa-solid fa-id-card text-2xl text-slate-400 mb-1"></i>
+                        <p class="font-bold text-slate-700">Scan Customer Driver's License</p>
+                        <p class="text-[10px] text-slate-400">Verifies age, license expiration, and insurance</p>
+                    </div>
+                    <div id="license-verified-badge" class="hidden p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-emerald-800 font-bold">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+                            <span>DMV Validated • Exp: 05/2029</span>
+                        </div>
+                        <span class="text-[10px] bg-emerald-200 px-2 py-0.5 rounded">DL #TY-99120</span>
+                    </div>
+                </div>
+
+                <!-- Key Tag -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="font-bold text-slate-700 block mb-1">Assigned Demo Key Tag</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800">
+                            <option>Key Box Tag #201 (Showroom Bay)</option>
+                            <option>Key Box Tag #202 (Demo Lot)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="font-bold text-slate-700 block mb-1">Departure Time</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800">
+                            <option>Immediate (Now)</option>
+                            <option>In 15 Minutes</option>
+                            <option>In 30 Minutes</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="confirmTestDriveBooking()" class="w-full bg-toyota-red hover:bg-toyota-darkRed text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-key"></i>
+                    <span>Confirm Test Drive & Release Key Tag</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPLICATION LOGIC & STATE -->
+    <script>
+        // Official Toyota Vehicle Database
+        const toyotaVehiclesDB = [
+            {
+                id: 'ty1',
+                name: '2026 Toyota Grand Highlander',
+                trim: 'Hybrid MAX Platinum AWD',
+                price: '$54,380 MSRP',
+                monthly: '$680/mo',
+                type: 'Hybrid',
+                seats: 7,
+                mpg: '27 MPG / 362 HP',
+                matchScore: 98,
+                status: 'In Showroom (Ready)',
+                keyTag: '#201',
+                image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&auto=format&fit=crop&q=80',
+                reasoning: ['Perfect 7-Passenger Seat Layout', '362 HP Hybrid MAX Power', 'Electronic AWD Standard', 'Fits $680/mo Target'],
+                features: ['Toyota Safety Sense 3.0', '12.3" Toyota Audio Multimedia', 'JBL 11-Speaker Audio', 'Panoramically Glass Sunroof']
+            },
+            {
+                id: 'ty2',
+                name: '2026 Toyota RAV4 Hybrid',
+                trim: 'XSE Hybrid AWD',
+                price: '$38,250 MSRP',
+                monthly: '$490/mo',
+                type: 'Hybrid',
+                seats: 5,
+                mpg: '38 MPG Combined',
+                matchScore: 91,
+                status: 'In Demo Bay (Ready)',
+                keyTag: '#202',
+                image: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80',
+                reasoning: ['Top Fuel Economy (38 MPG)', 'Electronic On-Demand AWD', 'Well Under Budget ($490/mo)'],
+                features: ['Sport-Tuned Suspension', 'SofTex-Trimmed Seats', 'Blind Spot Monitor', 'Hands-Free Power Liftgate']
+            },
+            {
+                id: 'ty3',
+                name: '2026 Toyota Crown',
+                trim: 'Platinum Hybrid MAX',
+                price: '$55,100 MSRP',
+                monthly: '$720/mo',
+                type: 'Hybrid',
+                seats: 5,
+                mpg: '30 MPG / Raised Ride Height',
+                matchScore: 84,
+                status: 'Out on Test Drive (ETA 6m)',
+                keyTag: '#205',
+                image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=600&auto=format&fit=crop&q=80',
+                reasoning: ['Executive Luxury Ride Height', 'Adaptive Variable Suspension'],
+                features: ['Advanced Park Assist', 'Bi-Tone Exterior Finish', 'Heated & Ventilated Leather', 'Head-Up Display']
+            },
+            {
+                id: 'ty4',
+                name: '2026 Toyota bZ4X EV',
+                trim: 'Limited AWD Pure Electric',
+                price: '$48,780 MSRP',
+                monthly: '$580/mo',
+                type: 'bZ EV',
+                seats: 5,
+                mpg: '228 Mi Range / Zero Emission',
+                matchScore: 78,
+                status: 'Charging in Stall 1',
+                keyTag: '#208',
+                image: 'https://images.unsplash.com/photo-1563720223185-11003d516935?w=600&auto=format&fit=crop&q=80',
+                reasoning: ['100% Electric - Zero Gas', 'X-MODE All-Wheel Drive'],
+                features: ['DC Fast Charging Ready', 'Fixed Panoramic Roof', 'Radiant Front Leg Heater', 'Intuitive Cockpit']
+            }
+        ];
+
+        // Lead Preset Profiles
+        const leadProfiles = {
+            'vance': {
+                name: 'Marcus & Elena Vance',
+                budget: 52000,
+                powertrain: 'Hybrid',
+                seats: '7',
+                use: 'family'
+            },
+            'chen': {
+                name: 'Dr. Aris Chen',
+                budget: 60000,
+                powertrain: 'Hybrid',
+                seats: '5',
+                use: 'executive'
+            },
+            'miller': {
+                name: 'Jake Miller',
+                budget: 45000,
+                powertrain: 'i-FORCE',
+                seats: '5',
+                use: 'offroad'
+            }
+        };
+
+        let selectedVehicleForBooking = null;
+
+        // Render Toyota Vehicle Cards
+        function renderVehicles() {
+            const container = document.getElementById('vehicle-cards-container');
+            container.innerHTML = '';
+
+            toyotaVehiclesDB.forEach((car, index) => {
+                const isTopMatch = index === 0;
+                
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-2xl border ${isTopMatch ? 'border-toyota-red shadow-md ring-1 ring-toyota-red/20' : 'border-slate-200 shadow-card'} p-5 transition-all hover:shadow-elevated`;
+                
+                let reasoningHtml = car.reasoning.map(tag => 
+                    `<span class="bg-red-50 text-toyota-red text-[10px] font-bold px-2.5 py-1 rounded-lg border border-red-100 flex items-center gap-1">
+                        <i class="fa-solid fa-check text-toyota-red"></i> ${tag}
+                    </span>`
+                ).join('');
+
+                let featuresHtml = car.features.map(f =>
+                    `<li class="flex items-center gap-1.5 text-slate-600"><i class="fa-solid fa-shield-halved text-[9px] text-toyota-red"></i> ${f}</li>`
+                ).join('');
+
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row gap-5">
+                        <div class="sm:w-48 h-36 rounded-xl overflow-hidden relative shrink-0 bg-slate-100">
+                            <img src="${car.image}" alt="${car.name}" class="w-full h-full object-cover">
+                            <span class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md">
+                                ${car.type}
+                            </span>
+                        </div>
+
+                        <div class="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2">
+                                            <h4 class="font-extrabold text-slate-900 text-base">${car.name}</h4>
+                                            <span class="text-xs font-semibold text-slate-500">${car.trim}</span>
+                                        </div>
+                                        <p class="text-xs text-slate-400 mt-0.5">Key Box Tag: <strong class="text-slate-700">${car.keyTag}</strong> • Status: <span class="text-emerald-700 font-bold">${car.status}</span></p>
+                                    </div>
+
+                                    <!-- AI Match Score Badge -->
+                                    <div class="flex flex-col items-end shrink-0">
+                                        <div class="${isTopMatch ? 'bg-toyota-red toyota-badge-glow' : 'bg-slate-800'} text-white px-3 py-1 rounded-xl text-center shadow-sm">
+                                            <span class="text-xs font-black">${car.matchScore}%</span>
+                                            <span class="text-[8px] block uppercase font-bold text-red-100">Toyota Match</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Reasoning Pills -->
+                                <div class="flex flex-wrap gap-1.5 mt-3">
+                                    ${reasoningHtml}
+                                </div>
+
+                                <!-- Key Spec Grid -->
+                                <ul class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mt-3">
+                                    ${featuresHtml}
+                                </ul>
+                            </div>
+
+                            <!-- Price & Test Drive CTA Button -->
+                            <div class="flex items-center justify-between pt-4 mt-3 border-t border-slate-100">
+                                <div>
+                                    <span class="text-lg font-black text-slate-900">${car.monthly}</span>
+                                    <span class="text-xs text-slate-400 font-semibold"> (${car.price})</span>
+                                </div>
+
+                                <button onclick="openScheduleModal('${car.id}')" class="bg-toyota-red hover:bg-toyota-darkRed text-white font-bold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-2">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>Schedule Toyota Drive</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Calculation Updates
+        function updateCalculations() {
+            const budgetVal = document.getElementById('input-budget').value;
+            document.getElementById('budget-val').innerText = `$${parseInt(budgetVal)-5000} - $${budgetVal} MSRP`;
+            renderVehicles();
+        }
+
+        function setPowertrain(pt, btn) {
+            document.querySelectorAll('.ptrain-btn').forEach(b => {
+                b.className = 'ptrain-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-bold text-slate-600 hover:bg-slate-100 text-center';
+            });
+            btn.className = 'ptrain-btn p-2 rounded-xl border-2 border-toyota-red bg-toyota-lightRed font-bold text-toyota-red text-center';
+            updateCalculations();
+        }
+
+        function runAIMatchingAnimation() {
+            const icon = document.getElementById('ai-spin-icon');
+            icon.classList.add('animate-spin');
+            showToast('Querying Toyota AI Matcher Engine...', 'info');
+
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                renderVehicles();
+                showToast('Matched: Toyota Grand Highlander Platinum is top fit (98%)', 'success');
+            }, 800);
+        }
+
+        function loadLead(key) {
+            const profile = leadProfiles[key];
+            if (!profile) return;
+
+            document.getElementById('active-lead-name').innerText = profile.name;
+            document.getElementById('input-budget').value = profile.budget;
+            document.getElementById('input-seats').value = profile.seats;
+            document.getElementById('modal-customer-name').innerText = profile.name;
+
+            updateCalculations();
+            showToast(`Loaded Toyota profile: ${profile.name}`, 'info');
+        }
+
+        // Compare Drawer
+        function toggleCompareModal() {
+            const modal = document.getElementById('compare-modal');
+            const grid = document.getElementById('compare-grid');
+            
+            if (modal.classList.contains('hidden')) {
+                const c1 = toyotaVehiclesDB[0];
+                const c2 = toyotaVehiclesDB[1];
+
+                grid.innerHTML = `
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="h-28 rounded-lg overflow-hidden mb-3"><img src="${c1.image}" class="w-full h-full object-cover"></div>
+                        <h4 class="font-bold text-slate-900 text-sm">${c1.name}</h4>
+                        <p class="text-toyota-red font-extrabold mt-1">${c1.monthly} (${c1.matchScore}% Match)</p>
+                        <ul class="space-y-2 mt-3 text-slate-600">
+                            <li><strong>Seating:</strong> ${c1.seats} Passengers</li>
+                            <li><strong>Powertrain:</strong> Hybrid MAX (362 HP)</li>
+                            <li><strong>Safety:</strong> Toyota Safety Sense 3.0</li>
+                        </ul>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <div class="h-28 rounded-lg overflow-hidden mb-3"><img src="${c2.image}" class="w-full h-full object-cover"></div>
+                        <h4 class="font-bold text-slate-900 text-sm">${c2.name}</h4>
+                        <p class="text-toyota-red font-extrabold mt-1">${c2.monthly} (${c2.matchScore}% Match)</p>
+                        <ul class="space-y-2 mt-3 text-slate-600">
+                            <li><strong>Seating:</strong> ${c2.seats} Passengers</li>
+                            <li><strong>Powertrain:</strong> 2.5L Hybrid Synergy Drive</li>
+                            <li><strong>MPG:</strong> 38 MPG Combined</li>
+                        </ul>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // Schedule Modal
+        function openScheduleModal(carId) {
+            selectedVehicleForBooking = toyotaVehiclesDB.find(v => v.id === carId) || toyotaVehiclesDB[0];
+            document.getElementById('modal-vehicle-title').innerText = `${selectedVehicleForBooking.name} (Tag ${selectedVehicleForBooking.keyTag})`;
+            document.getElementById('schedule-modal').classList.remove('hidden');
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('schedule-modal').classList.add('hidden');
+        }
+
+        function simulateLicenseScan() {
+            const dropzone = document.getElementById('license-dropzone');
+            const verified = document.getElementById('license-verified-badge');
+            
+            dropzone.innerHTML = '<i class="fa-solid fa-spinner animate-spin text-toyota-red text-2xl"></i><p class="font-bold text-slate-700 mt-1">Verifying State DMV Records...</p>';
+
+            setTimeout(() => {
+                dropzone.classList.add('hidden');
+                verified.classList.remove('hidden');
+                showToast("Driver's License Verified via Toyota Dealership Gateway", 'success');
+            }, 1000);
+        }
+
+        function confirmTestDriveBooking() {
+            closeScheduleModal();
+            showToast(`Test Drive Dispatched! Key Tag ${selectedVehicleForBooking.keyTag} Unlocked`, 'success');
+        }
+
+        // Navigation
+        function switchTab(tabId) {
+            const tabs = ['recommender', 'leads', 'fleet', 'schedule', 'analytics'];
+            tabs.forEach(t => {
+                const sec = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tabId) {
+                    sec.classList.remove('hidden');
+                    btn.className = 'nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition bg-toyota-lightRed text-toyota-red border border-red-100';
+                } else {
+                    sec.classList.add('hidden');
+                    btn.className = 'nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition';
+                }
+            });
+        }
+
+        // Toast
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let color = 'bg-toyota-red';
+            if (type === 'success') color = 'bg-emerald-600';
+            
+            toast.className = `bg-white p-3.5 rounded-xl shadow-elevated border border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-800 pointer-events-auto transform transition-all duration-300 translate-y-[-10px] opacity-0`;
+            toast.innerHTML = `<span class="w-2 h-2 rounded-full ${color}"></span><span>${msg}</span>`;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-[-10px]', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function resetFilters() {
+            document.getElementById('input-budget').value = 48000;
+            updateCalculations();
+            showToast('Filters reset to default Toyota inventory', 'info');
+        }
+
+        // Initialize Charts
+        window.onload = function() {
+            renderVehicles();
+
+            // Toyota Top Models Chart
+            const ctx1 = document.getElementById('toyotaModelChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['RAV4 Hybrid', 'Grand Highlander', 'Camry Hybrid', 'Tacoma TRD', 'Toyota Crown', 'bZ4X EV'],
+                    datasets: [{
+                        label: 'Test Drives Completed',
+                        data: [142, 118, 86, 74, 52, 41],
+                        backgroundColor: '#EB0A1E',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { grid: { color: '#F1F5F9' } }, x: { grid: { display: false } } }
+                }
+            });
+
+            // Conversion Funnel
+            const ctx2 = document.getElementById('conversionFunnelChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Closed Sale (44%)', 'Pending Finance (28%)', 'Follow-up Call (18%)', 'Did Not Close (10%)'],
+                    datasets: [{
+                        data: [44, 28, 18, 10],
+                        backgroundColor: ['#EB0A1E', '#2563EB', '#F59E0B', '#94A3B8'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right' } },
+                    cutout: '65%'
+                }
+            });
+        };
+    </script>
+</body>
+</html>

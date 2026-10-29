@@ -1,124 +1,537 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DriveMatch — Vehicle Recommender</title>
-  <link rel="stylesheet" href="/static/styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DriveMatch Pro — AI Sales & Test Drive OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        /* Toyota red palette — matches Nandi Toyota brand */
+                        brand: { 50:'#fef2f2',100:'#fee2e2',200:'#fecaca',500:'#eb0a1e',600:'#eb0a1e',700:'#cc0015',900:'#a80010' }
+                    },
+                    fontFamily: { sans: ['Plus Jakarta Sans','Inter','sans-serif'] },
+                    boxShadow: {
+                        'card':'0 1px 3px 0 rgba(15,23,42,.04),0 1px 2px -1px rgba(15,23,42,.04)',
+                        'dropdown':'0 10px 25px -5px rgba(15,23,42,.1),0 8px 10px -6px rgba(15,23,42,.05)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family:'Plus Jakarta Sans',sans-serif; background:#F8FAFC; color:#0F172A; -webkit-font-smoothing:antialiased; }
+        ::-webkit-scrollbar { width:6px; height:6px; }
+        ::-webkit-scrollbar-track { background:#F1F5F9; }
+        ::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:9999px; }
+        ::-webkit-scrollbar-thumb:hover { background:#94A3B8; }
+        .match-badge-pulse { animation:pulseGlow 2.5s infinite ease-in-out; }
+        @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 0 rgba(235,10,30,.35)}50%{box-shadow:0 0 0 8px rgba(235,10,30,0)} }
+        .fuel-btn.active  { border-width:2px; border-color:#eb0a1e; background:#fef2f2; color:#eb0a1e; font-weight:700; }
+        .body-btn.active  { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
+        .trans-btn.active { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
+        .feat-row label   { cursor:pointer; }
+        .toyota-logo-oval { filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
+    </style>
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand"><span class="logo">◆</span> DriveMatch</div>
-    <button id="bookingsBtn" class="ghost" title="Test drive bookings">📅 Bookings</button>
-    <button id="metricsBtn" class="ghost">Metrics</button>
-  </header>
+<body class="h-full flex flex-col overflow-hidden select-none">
 
-  <main class="layout">
-    <aside class="left-col">
-    <form id="searchForm" autocomplete="off" class="panel search-panel">
-      <div class="search-row">
-        <input type="text" id="searchQ" class="search-input"
-               placeholder='Try "automatic SUV under 15 lakh with sunroof"' />
-        <button type="submit" class="primary-sm">Search</button>
-      </div>
-    </form>
-    <form id="prefs" class="panel">
-      <h1>Find your next car</h1>
-      <p class="sub">Tell us what matters. We rank every vehicle by how closely it matches you — and say why.</p>
+<!-- Toast -->
+<div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none w-80"></div>
 
-      <fieldset>
-        <legend>Budget (₹ lakh)</legend>
-        <div class="row">
-          <label>Min <input type="number" id="budgetMin" min="0" step="0.5" value="10" /></label>
-          <label>Max <input type="number" id="budgetMax" min="1" step="0.5" value="18" required /></label>
+<div class="flex h-screen w-screen overflow-hidden bg-slate-50">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between z-30 shrink-0">
+        <div>
+            <!-- Nandi Toyota header — red bar with oval logo + brand text -->
+            <div class="h-16 px-5 border-b border-slate-200 flex items-center justify-between bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-md shrink-0">
+                        <!-- Toyota three-oval SVG -->
+                        <svg class="w-7 h-7 toyota-logo-oval" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <ellipse cx="50" cy="40" rx="48" ry="30" stroke="white" stroke-width="5"/>
+                            <ellipse cx="50" cy="40" rx="17" ry="30" stroke="white" stroke-width="5"/>
+                            <ellipse cx="50" cy="22" rx="32" ry="12" stroke="white" stroke-width="5"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="font-extrabold text-base tracking-tight text-slate-900 block leading-none">NANDI TOYOTA</span>
+                        <span class="text-[10px] font-bold tracking-widest text-brand-600 uppercase">DriveMatch OS</span>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="p-3 space-y-1">
+                <p class="px-3 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Sales &amp; Drive Engine</p>
+                <button onclick="switchTab('recommender')" id="nav-recommender" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition bg-brand-50 text-brand-600 border border-brand-100">
+                    <i class="fa-solid fa-wand-magic-sparkles w-4 text-center"></i>
+                    <span>Toyota AI Recommender</span>
+                    <span class="ml-auto bg-brand-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">Core</span>
+                </button>
+                <button onclick="switchTab('leads')" id="nav-leads" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-users-viewfinder w-4 text-center"></i>
+                    <span>Showroom Leads</span>
+                    <span id="leads-badge" class="ml-auto bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                </button>
+                <button onclick="switchTab('fleet')" id="nav-fleet" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-car-side w-4 text-center"></i>
+                    <span>Test Drive Fleet</span>
+                </button>
+                <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-calendar-check w-4 text-center"></i>
+                    <span>Drive Calendar</span>
+                </button>
+                <p class="px-3 pt-4 py-2 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Performance</p>
+                <button onclick="switchTab('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-xs text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition">
+                    <i class="fa-solid fa-chart-pie w-4 text-center"></i>
+                    <span>Dealership Analytics</span>
+                </button>
+            </nav>
         </div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Vehicle type</legend>
-        <div class="chips" id="bodyTypes"></div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Fuel</legend>
-        <div class="chips" id="fuels"></div>
-        <label class="check"><input type="checkbox" id="fuelStrict" /> Only show these fuels</label>
-      </fieldset>
-
-      <fieldset>
-        <legend>Transmission</legend>
-        <div class="seg" id="transmission"></div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Must-have features</legend>
-        <div class="chips" id="features"></div>
-      </fieldset>
-
-      <fieldset>
-        <legend>What matters most</legend>
-        <div class="chips" id="priorities"></div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Seats needed</legend>
-        <select id="minSeats">
-          <option value="">Any</option><option value="5">5+</option><option value="7">7</option>
-        </select>
-      </fieldset>
-
-      <button type="submit" class="primary">Show my matches</button>
-    </form>
+        <div class="p-4 border-t border-slate-200 bg-slate-50/50">
+            <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-card mb-3">
+                <div class="flex justify-between items-center text-[11px] text-slate-500 mb-1">
+                    <span>Toyota Sales Goal</span>
+                    <span id="goal-label" class="font-bold text-brand-600">0 Booked</span>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                    <div id="goal-bar" class="bg-brand-600 h-full rounded-full transition-all" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-xs">
+                    <svg class="w-5 h-5" viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <ellipse cx="50" cy="40" rx="48" ry="30" stroke="white" stroke-width="6"/>
+                        <ellipse cx="50" cy="40" rx="17" ry="30" stroke="white" stroke-width="6"/>
+                        <ellipse cx="50" cy="22" rx="32" ry="12" stroke="white" stroke-width="6"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-900 truncate">Toyota Sales Advisor</p>
+                    <p class="text-[10px] text-slate-500 truncate" id="vehicles-count">Loading catalog…</p>
+                </div>
+            </div>
+        </div>
     </aside>
 
-    <section class="results">
-      <div id="status" class="status">Set your preferences and press <b>Show my matches</b>, or use the search box.</div>
-      <div id="parsedTags" class="parsed-tags" hidden></div>
-      <ol id="list" class="cards"></ol>
-    </section>
-  </main>
+    <!-- MAIN -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-  <div id="compareBar" class="compare-bar" hidden>
-    <span id="compareBarLabel"></span>
-    <button id="compareViewBtn" class="primary-sm">Compare</button>
-    <button id="compareClearBtn" class="ghost">Clear</button>
-  </div>
+        <!-- TOP BAR -->
+        <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-20 shrink-0">
+            <div class="flex items-center gap-4 flex-1 max-w-xl">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="nlp-search" placeholder='Try "automatic compact SUV under ₹18 lakh with sunroof"…'
+                        class="w-full bg-slate-100 border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                </div>
+                <button onclick="runNLPSearch()" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shrink-0">Search</button>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="topbar-ctr" class="hidden lg:flex items-center gap-2 bg-brand-50 border border-brand-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-brand-700">
+                    <i class="fa-solid fa-bullseye"></i><span>CTR —</span>
+                </div>
+                <div id="topbar-tdr" class="hidden lg:flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-700">
+                    <i class="fa-solid fa-car-side"></i><span>Test drive rate —</span>
+                </div>
+                <div class="h-6 w-px bg-slate-200 mx-1"></div>
+                <button onclick="switchTab('leads'); loadLeadInbox();" class="bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-user-plus"></i><span>New Customer Check-in</span>
+                </button>
+            </div>
+        </header>
 
-  <dialog id="compareDlg">
-    <h2>Compare cars</h2>
-    <div id="compareBody" style="overflow-x:auto"></div>
-    <form method="dialog"><button class="ghost">Close</button></form>
-  </dialog>
+        <!-- WORKSPACE -->
+        <main class="flex-1 overflow-y-auto p-6 bg-[#F4F6F9]" id="main-workspace">
 
-  <dialog id="bookingsDlg">
-    <h2>📅 Test drive bookings</h2>
-    <div id="bookingsBody"></div>
-    <form method="dialog"><button class="ghost">Close</button></form>
-  </dialog>
+            <!-- TAB 1: AI RECOMMENDER -->
+            <section id="tab-recommender" class="space-y-6">
 
-  <dialog id="metricsDlg">
-    <h2>Success metrics</h2>
-    <div id="metricsBody"></div>
-    <form method="dialog"><button class="ghost">Close</button></form>
-  </dialog>
+                <!-- Active customer / presets banner -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-card flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-address-card text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Customer Profile:</span>
+                                <span id="active-lead-name" class="font-extrabold text-slate-900 text-sm">New Walk-in</span>
+                                <span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">In Showroom</span>
+                            </div>
+                            <p id="active-lead-sub" class="text-xs text-slate-500 mt-0.5">Select a quick profile or set preferences below.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-semibold text-slate-500">Quick Profile Selector:</span>
+                        <button onclick="loadLead('kumar')" class="px-3 py-1.5 rounded-xl border border-brand-200 bg-brand-50 text-brand-700 font-bold text-xs hover:bg-brand-100 transition">
+                            Raj &amp; Priya (SUV/Hybrid)
+                        </button>
+                        <button onclick="loadLead('mehta')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                            Dr. Mehta (Premium EV)
+                        </button>
+                        <button onclick="loadLead('ananya')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
+                            Ananya (City First Car)
+                        </button>
+                    </div>
+                </div>
 
-  <dialog id="testDriveDlg">
-    <h2>Book a test drive</h2>
-    <form id="testDriveForm">
-      <div class="row"><label>Name <input type="text" id="tdName" required maxlength="100" /></label></div>
-      <div class="row"><label>Phone <input type="tel" id="tdPhone" required minlength="7" maxlength="20" /></label></div>
-      <div class="row"><label>City <input type="text" id="tdCity" required maxlength="100" /></label></div>
-      <div class="row"><label>Branch / Showroom <input type="text" id="tdBranch" required maxlength="100" placeholder="e.g. Koramangala Showroom" /></label></div>
-      <div class="row"><label>Preferred date <input type="date" id="tdDate" required /></label></div>
-      <div class="row"><label>Sales officer name <input type="text" id="tdSalesOfficer" maxlength="100" placeholder="Assigned officer" /></label></div>
-      <div class="row">
-        <button type="submit" class="primary">Confirm booking</button>
-        <button type="button" class="ghost" id="tdCancel">Cancel</button>
-      </div>
-    </form>
-  </dialog>
+                <!-- 2-column matching layout -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-  <div id="toast" class="toast" hidden></div>
-  <script src="/static/app.js"></script>
+                    <!-- LEFT: Customer Criteria -->
+                    <div class="lg:col-span-5 bg-white p-5 rounded-2xl border border-slate-200 shadow-card space-y-5 flex flex-col justify-between">
+                        <div class="space-y-4">
+                            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                                <div>
+                                    <h3 class="font-bold text-base text-slate-900">1. Customer Criteria</h3>
+                                    <p class="text-xs text-slate-500">Adjust filters to recalculate AI vehicle match</p>
+                                </div>
+                                <button onclick="resetFilters()" class="text-xs font-semibold text-slate-400 hover:text-slate-600">Reset</button>
+                            </div>
+
+                            <!-- Budget -->
+                            <div class="text-xs">
+                                <div class="flex justify-between font-bold text-slate-700 mb-2">
+                                    <span>Budget (₹ lakh)</span>
+                                    <span id="budget-display" class="text-brand-600 font-extrabold">₹10 – ₹18 L</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="text-slate-500 font-semibold block mb-1">Min ₹L</label>
+                                        <input type="number" id="input-budget-min" min="0" step="0.5" value="10"
+                                            oninput="updateBudgetDisplay()"
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                                    </div>
+                                    <div>
+                                        <label class="text-slate-500 font-semibold block mb-1">Max ₹L</label>
+                                        <input type="number" id="input-budget-max" min="1" step="0.5" value="18"
+                                            oninput="updateBudgetDisplay()"
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Fuel / Powertrain -->
+                            <div class="text-xs">
+                                <label class="font-bold text-slate-700 block mb-1.5">Fuel / Powertrain</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="toggleFuel('all', this)" data-fuel="all" class="fuel-btn active p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">All</button>
+                                    <button onclick="toggleFuel('electric', this)" data-fuel="electric" class="fuel-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">⚡ Electric</button>
+                                    <button onclick="toggleFuel('hybrid', this)" data-fuel="hybrid" class="fuel-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">🌿 Hybrid</button>
+                                    <button onclick="toggleFuel('petrol', this)" data-fuel="petrol" class="fuel-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">⛽ Petrol</button>
+                                    <button onclick="toggleFuel('diesel', this)" data-fuel="diesel" class="fuel-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">🛢 Diesel</button>
+                                    <button onclick="toggleFuel('cng', this)" data-fuel="cng" class="fuel-btn p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center text-xs">🟢 CNG</button>
+                                </div>
+                                <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                    <input type="checkbox" id="fuel-strict" class="rounded text-brand-600">
+                                    <span class="text-slate-500 font-semibold">Strict — exclude other fuels</span>
+                                </label>
+                            </div>
+
+                            <!-- Body Type -->
+                            <div class="text-xs">
+                                <label class="font-bold text-slate-700 block mb-1.5">Body Type</label>
+                                <div class="flex flex-wrap gap-1.5" id="body-type-chips">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Transmission -->
+                            <div class="text-xs">
+                                <label class="font-bold text-slate-700 block mb-1.5">Transmission</label>
+                                <div class="flex gap-2">
+                                    <button onclick="setTrans('any', this)" data-trans="any" class="trans-btn active flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Any</button>
+                                    <button onclick="setTrans('automatic', this)" data-trans="automatic" class="trans-btn flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Automatic</button>
+                                    <button onclick="setTrans('manual', this)" data-trans="manual" class="trans-btn flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Manual</button>
+                                </div>
+                                <label class="flex items-center gap-2 mt-2 cursor-pointer">
+                                    <input type="checkbox" id="trans-strict" class="rounded text-brand-600">
+                                    <span class="text-slate-500 font-semibold">Strict transmission filter</span>
+                                </label>
+                            </div>
+
+                            <!-- Must-Have Features -->
+                            <div class="text-xs">
+                                <label class="font-bold text-slate-700 block mb-1.5">Must-Have Features</label>
+                                <div class="grid grid-cols-2 gap-1.5" id="feature-checks">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Priorities + Seats -->
+                            <div class="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <label class="font-bold text-slate-700 block mb-1.5">Priorities</label>
+                                    <div class="space-y-1.5" id="priority-checks">
+                                        <!-- populated by JS -->
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="font-bold text-slate-700 block mb-1">Min Seats</label>
+                                    <select id="input-seats" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                                        <option value="">Any</option>
+                                        <option value="5">5+ seats</option>
+                                        <option value="7">7 seats (3rd row)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <button onclick="runAIMatch()" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-arrows-rotate" id="ai-spin-icon"></i>
+                                <span>Recalculate Toyota AI Recommendation</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT: Vehicle Cards -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-base text-slate-900">2. Optimal Vehicles for Test Drive</h3>
+                                <p id="results-meta" class="text-xs text-slate-500">Set preferences and click Recalculate.</p>
+                            </div>
+                            <button onclick="openCompareModal()" class="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-code-compare text-brand-600"></i>
+                                <span id="compare-btn-label">Compare (<span id="compare-count">0</span>)</span>
+                            </button>
+                        </div>
+
+                        <!-- NLP parsed tags -->
+                        <div id="parsed-tags-row" class="flex flex-wrap gap-1.5 hidden"></div>
+
+                        <div id="vehicle-cards-container" class="space-y-4">
+                            <div class="bg-white rounded-2xl border border-slate-200 shadow-card p-10 text-center text-slate-400 text-sm">
+                                <i class="fa-solid fa-car-side text-4xl mb-3 text-slate-300 block"></i>
+                                Set your preferences and click <strong class="text-slate-600">Recalculate</strong>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: LEAD INBOX -->
+            <section id="tab-leads" class="space-y-6 hidden">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Test Drive Leads &amp; Bookings</h3>
+                            <p class="text-xs text-slate-500">All submitted test drive booking requests</p>
+                        </div>
+                        <button onclick="loadLeadInbox()" class="text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-100">Refresh</button>
+                    </div>
+                    <div id="leads-table-container" class="overflow-x-auto">
+                        <p class="text-slate-400 text-sm text-center py-8">Loading leads…</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: FLEET STATUS -->
+            <section id="tab-fleet" class="space-y-6 hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Total Vehicles</p>
+                        <h3 id="fleet-total" class="text-2xl font-black text-slate-900 mt-1">—</h3>
+                        <p class="text-[11px] text-emerald-600 font-semibold mt-1">In active catalog</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Test Drives Booked</p>
+                        <h3 id="fleet-booked" class="text-2xl font-black text-brand-600 mt-1">—</h3>
+                        <p class="text-[11px] text-slate-500 font-semibold mt-1">Total since launch</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Recommendations Served</p>
+                        <h3 id="fleet-impressions" class="text-2xl font-black text-amber-600 mt-1">—</h3>
+                        <p class="text-[11px] text-amber-600 font-semibold mt-1">Vehicle impressions logged</p>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                    <h3 class="font-bold text-base text-slate-900 mb-4">Catalog Highlights by Fuel</h3>
+                    <div id="fleet-fuel-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                        <!-- populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: TEST DRIVE CALENDAR -->
+            <section id="tab-schedule" class="space-y-6 hidden">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-base font-bold text-slate-900">Test Drive Schedule</h3>
+                        <button onclick="loadSchedule()" class="text-xs font-semibold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-100">Refresh</button>
+                    </div>
+                    <div id="schedule-container" class="space-y-3">
+                        <p class="text-slate-400 text-sm text-center py-8">Loading schedule…</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: SALES ANALYTICS -->
+            <section id="tab-analytics" class="space-y-6 hidden">
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-grid">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Rec. CTR</p>
+                        <h3 id="kpi-ctr" class="text-2xl font-black text-slate-900 mt-1">—</h3>
+                        <p id="kpi-ctr-sub" class="text-[11px] text-slate-500 mt-1">Clicks / impressions</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Test Drive Rate</p>
+                        <h3 id="kpi-tdr" class="text-2xl font-black text-brand-600 mt-1">—</h3>
+                        <p id="kpi-tdr-sub" class="text-[11px] text-slate-500 mt-1">Users who booked</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">Lead Conversion</p>
+                        <h3 id="kpi-lcr" class="text-2xl font-black text-emerald-600 mt-1">—</h3>
+                        <p id="kpi-lcr-sub" class="text-[11px] text-slate-500 mt-1">Purchases / test drives</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <p class="text-xs font-semibold text-slate-400 uppercase">CSAT</p>
+                        <h3 id="kpi-csat" class="text-2xl font-black text-amber-600 mt-1">—</h3>
+                        <p id="kpi-csat-sub" class="text-[11px] text-slate-500 mt-1">Positive feedback rate</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <h3 class="font-bold text-base text-slate-900 mb-1">Lead-to-Sale Conversion Funnel</h3>
+                        <p class="text-xs text-slate-500 mb-4">Impressions → Clicks → Test Drives → Purchases</p>
+                        <div class="h-64"><canvas id="funnelChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-card">
+                        <h3 class="font-bold text-base text-slate-900 mb-1">CTR by Recommendation Position</h3>
+                        <p class="text-xs text-slate-500 mb-4">Click-through rate for each rank position</p>
+                        <div class="h-64"><canvas id="positionChart"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+</div>
+
+<!-- COMPARE MODAL -->
+<div id="compare-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-5xl rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-5 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i class="fa-solid fa-code-compare text-brand-600 text-sm"></i> Toyota Vehicle Comparison</h3>
+                <p class="text-xs text-slate-500">Side-by-side spec comparison · up to 3 models</p>
+            </div>
+            <button onclick="closeCompareModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="compare-grid" class="overflow-x-auto text-xs"></div>
+        <p class="text-xs text-slate-400 text-center">Select vehicles using the "⇄ Compare" button on each card.</p>
+    </div>
+</div>
+
+<!-- TEST DRIVE BOOKING MODAL -->
+<div id="schedule-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-sm">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Schedule Test Drive</h3>
+                    <p id="modal-vehicle-title" class="text-xs text-brand-600 font-bold">—</p>
+                </div>
+            </div>
+            <button onclick="closeBookingModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <form id="booking-form" onsubmit="confirmBooking(event)" class="space-y-3 text-xs">
+            <!-- Customer details -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Customer Name *</label>
+                    <input id="td-name" type="text" required maxlength="100" placeholder="Full name"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Phone *</label>
+                    <input id="td-phone" type="tel" required minlength="7" maxlength="20" placeholder="Mobile number"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">City *</label>
+                    <input id="td-city" type="text" required maxlength="100" placeholder="e.g. Bangalore"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Branch / Showroom</label>
+                    <input id="td-branch" type="text" maxlength="100" placeholder="e.g. Koramangala"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+
+            <!-- Test Drive Route -->
+            <div>
+                <label class="font-bold text-slate-700 block mb-1.5">Select Test Drive Route</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" onclick="setRoute(this)" class="route-btn border-2 border-brand-500 bg-brand-50 p-2.5 rounded-xl text-center">
+                        <span class="font-bold text-brand-700 block">City Drive</span>
+                        <span class="text-[10px] text-slate-500">15 Min · Comfort</span>
+                    </button>
+                    <button type="button" onclick="setRoute(this)" class="route-btn border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-center hover:bg-slate-100">
+                        <span class="font-bold text-slate-700 block">Highway Loop</span>
+                        <span class="text-[10px] text-slate-500">25 Min · Performance</span>
+                    </button>
+                    <button type="button" onclick="setRoute(this)" class="route-btn border border-slate-200 bg-slate-50 p-2.5 rounded-xl text-center hover:bg-slate-100">
+                        <span class="font-bold text-slate-700 block">Feature Demo</span>
+                        <span class="text-[10px] text-slate-500">10 Min · ADAS &amp; Tech</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Date & Officer -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Preferred Date *</label>
+                    <input id="td-date" type="date" required
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Sales Officer</label>
+                    <input id="td-officer" type="text" maxlength="100" placeholder="Assigned officer"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+            <div class="pt-2 flex gap-2">
+                <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-key"></i> Confirm &amp; Release Key
+                </button>
+                <button type="button" onclick="closeBookingModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tailwind safelist: ensures dynamic class names are generated by CDN JIT -->
+<div class="hidden
+  bg-brand-500 bg-brand-400 ring-brand-500/20 border-brand-500
+  from-blue-400 to-emerald-500 from-emerald-400 to-teal-500
+  from-orange-400 to-amber-500 from-slate-400 to-slate-600
+  from-teal-400 to-cyan-500 from-slate-300 to-slate-400
+  animate-spin hover:shadow-dropdown border-emerald-500 ring-emerald-500/20 shadow-md
+  bg-emerald-600 bg-emerald-500 bg-blue-500 text-blue-200"></div>
+
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>

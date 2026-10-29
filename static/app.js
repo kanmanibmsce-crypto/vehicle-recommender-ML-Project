@@ -1,62 +1,102 @@
-// DriveMatch front end: builds the preference form, calls /api/recommend,
-// renders ranked cards with explanations, and logs every interaction to /api/events.
+// DriveMatch Pro — API-connected frontend
+// Talks to /api/recommend, /api/events, /api/bookings/test-drive, /api/metrics
 
 const $ = (s) => document.querySelector(s);
-const PRETTY = {
-  hatchback: "Hatchback", sedan: "Sedan", micro_suv: "Micro SUV", compact_suv: "Compact SUV",
-  midsize_suv: "Mid-size SUV", large_suv: "Large SUV", mpv: "MPV / 7-seater",
-  petrol: "Petrol", diesel: "Diesel", cng: "CNG", hybrid: "Hybrid", electric: "Electric",
-  any: "Any", manual: "Manual", automatic: "Automatic",
-  safety: "Safety", performance: "Performance", space: "Space", efficiency: "Efficiency",
-};
-const pretty = (k) => PRETTY[k] || k;
 
+/* ── User identity ────────────────────────────────────────────────────── */
 function getUserId() {
   let id = null;
   try { id = localStorage.getItem("dm_user"); } catch (_) {}
-  if (!id) {
-    id = "u_" + Math.random().toString(36).slice(2, 10);
-    try { localStorage.setItem("dm_user", id); } catch (_) {}
-  }
+  if (!id) { id = "u_" + Math.random().toString(36).slice(2, 10); try { localStorage.setItem("dm_user", id); } catch (_) {} }
   return id;
 }
 const USER_ID = getUserId();
-let lastRecId = null;
-let testDriveTarget = null;
-let compareList = []; // [{vehicle, match_pct, rank}, ...] max 3
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.hidden = false;
-  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), 1800);
-}
+/* ── State ────────────────────────────────────────────────────────────── */
+let lastRecId     = null;
+let currentResults = [];
+let bookingTarget  = null;   // { vehicleId, vehicleName, rank }
+let compareList    = [];     // up to 3 items: { vehicle, match_pct, rank }
+let selectedFuels  = [];     // empty = All
+let selectedBodies = [];
+let selectedTrans  = "any";
+let funnelChart    = null;
+let posChart       = null;
 
-function chips(container, items, { multi = true, initial = [] } = {}) {
-  const el = $(container);
-  items.forEach(({ key, label }) => {
-    const b = document.createElement("button");
-    b.type = "button"; b.className = el.classList.contains("seg") ? "" : "chip";
-    b.textContent = label; b.dataset.key = key;
-    b.setAttribute("aria-pressed", initial.includes(key));
-    b.onclick = () => {
-      if (!multi) el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", false));
-      b.setAttribute("aria-pressed", multi ? b.getAttribute("aria-pressed") !== "true" : true);
-    };
-    el.appendChild(b);
-  });
-}
-const picked = (container) =>
-  [...document.querySelectorAll(`${container} [aria-pressed=true]`)].map((b) => b.dataset.key);
+const PRETTY = {
+  hatchback:"Hatchback", sedan:"Sedan", micro_suv:"Micro SUV", compact_suv:"Compact SUV",
+  midsize_suv:"Mid-size SUV", large_suv:"Large SUV", mpv:"MPV / 7-seater",
+  petrol:"Petrol", diesel:"Diesel", cng:"CNG", hybrid:"Hybrid", electric:"Electric",
+  any:"Any", manual:"Manual", automatic:"Automatic",
+  safety:"Safety", performance:"Performance", space:"Space", efficiency:"Efficiency",
+};
+const pretty = (k) => PRETTY[k] || (k || "").replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
 
+const FUEL_COLORS = {
+  electric: "from-blue-400 to-emerald-500",
+  hybrid:   "from-emerald-400 to-teal-500",
+  petrol:   "from-orange-400 to-amber-500",
+  diesel:   "from-slate-400 to-slate-600",
+  cng:      "from-teal-400 to-cyan-500",
+};
+
+const FUEL_EMOJI  = { electric:"⚡", hybrid:"🌿", petrol:"⛽", diesel:"🛢", cng:"🟢" };
+
+const BODY_IMAGES = {
+  hatchback:   "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=600&auto=format&fit=crop&q=80",
+  micro_suv:   "https://images.unsplash.com/photo-1609521263047-f8f205293f24?w=600&auto=format&fit=crop&q=80",
+  compact_suv: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=600&auto=format&fit=crop&q=80",
+  sedan:       "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=600&auto=format&fit=crop&q=80",
+  midsize_suv: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=600&auto=format&fit=crop&q=80",
+  large_suv:   "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=600&auto=format&fit=crop&q=80",
+  mpv:         "https://images.unsplash.com/photo-1590362891991-f776e747a588?w=600&auto=format&fit=crop&q=80",
+};
+const ELECTRIC_IMG = "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600&auto=format&fit=crop&q=80";
+let featuresMap = {};
+
+/* ── Indian quick-profile presets ─────────────────────────────────────── */
+const LEAD_PROFILES = {
+  kumar: {
+    name: "Raj & Priya Kumar",
+    sub:  "Family looking for 7-seat hybrid/EV SUV",
+    budgetMin: 20, budgetMax: 28,
+    fuels: ["hybrid","electric"], bodies: ["midsize_suv","large_suv","mpv"],
+    trans: "automatic", seats: "7",
+    features: ["six_airbags","adas","camera_360"],
+    priorities: ["safety","space"],
+  },
+  mehta: {
+    name: "Dr. Mehta",
+    sub:  "Premium electric sedan, safety & performance",
+    budgetMin: 30, budgetMax: 55,
+    fuels: ["electric","hybrid"], bodies: ["sedan","compact_suv"],
+    trans: "automatic", seats: "",
+    features: ["sunroof","adas","ventilated_seats","wireless_charging"],
+    priorities: ["safety","performance"],
+  },
+  ananya: {
+    name: "Ananya Sharma",
+    sub:  "First car — city commute, fuel efficiency",
+    budgetMin: 8, budgetMax: 14,
+    fuels: ["petrol","electric"], bodies: ["hatchback","compact_suv"],
+    trans: "any", seats: "",
+    features: ["android_auto","auto_climate"],
+    priorities: ["efficiency"],
+  },
+};
+
+/* ── API helper ───────────────────────────────────────────────────────── */
 async function api(path, body, method) {
   const m = method || (body ? "POST" : "GET");
-  const res = await fetch(path, (body !== undefined && body !== null) ? {
-    method: m, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-  } : undefined);
+  const res = await fetch(path, body !== undefined && body !== null
+    ? { method: m, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    : undefined
+  );
   if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    const msg = Array.isArray(data.detail)
-      ? data.detail.map(e => `${e.loc?.slice(-1)[0] ?? ""}: ${e.msg}`).join("; ")
-      : (data.detail || res.statusText);
+    const d = await res.json().catch(() => ({}));
+    const msg = Array.isArray(d.detail)
+      ? d.detail.map(e => `${e.loc?.slice(-1)[0] ?? ""}: ${e.msg}`).join("; ")
+      : (d.detail || res.statusText);
     throw new Error(msg);
   }
   return res.json();
@@ -69,345 +109,780 @@ function logEvent(event_type, vehicle_id, position, value) {
   }).catch(() => {});
 }
 
-async function init() {
-  const o = await api("/api/options");
-  chips("#bodyTypes", o.body_types.map((k) => ({ key: k, label: pretty(k) })), { initial: ["compact_suv"] });
-  chips("#fuels", o.fuels.map((k) => ({ key: k, label: pretty(k) })));
-  chips("#transmission", o.transmissions.map((k) => ({ key: k, label: pretty(k) })), { multi: false, initial: ["any"] });
-  chips("#features", o.features.map((f) => ({ key: f.key, label: f.label })), { initial: ["sunroof", "six_airbags"] });
-  chips("#priorities", o.priorities.map((k) => ({ key: k, label: pretty(k) })), { initial: ["safety"] });
+/* ── Toast ────────────────────────────────────────────────────────────── */
+function showToast(msg, type = "info") {
+  const container = $("#toast-container");
+  const toast = document.createElement("div");
+  const dot = type === "success" ? "bg-emerald-500" : type === "error" ? "bg-red-500" : "bg-brand-600";
+  toast.className = "bg-white p-3.5 rounded-xl shadow-dropdown border border-slate-200 flex items-center gap-2 text-xs font-semibold text-slate-800 pointer-events-auto transform transition-all duration-300 -translate-y-2 opacity-0";
+  toast.innerHTML = `<span class="w-2 h-2 rounded-full ${dot} shrink-0"></span><span>${msg}</span>`;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.remove("-translate-y-2","opacity-0"));
+  setTimeout(() => { toast.classList.add("opacity-0"); setTimeout(() => toast.remove(), 300); }, 3000);
 }
 
-$("#searchForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const q = $("#searchQ").value.trim();
+/* ── Tab switching ────────────────────────────────────────────────────── */
+const TABS = ["recommender","leads","fleet","schedule","analytics"];
+
+function switchTab(tabId) {
+  TABS.forEach(t => {
+    const sec = $(`#tab-${t}`), btn = $(`#nav-${t}`);
+    if (t === tabId) {
+      sec.classList.remove("hidden");
+      btn.className = "nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition bg-brand-50 text-brand-600 border border-brand-100";
+    } else {
+      sec.classList.add("hidden");
+      btn.className = "nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition";
+    }
+  });
+  if (tabId === "analytics")  loadAnalytics();
+  if (tabId === "schedule")   loadSchedule();
+  if (tabId === "leads")      loadLeadInbox();
+  if (tabId === "fleet")      loadFleet();
+}
+
+/* ── Budget display ───────────────────────────────────────────────────── */
+function updateBudgetDisplay() {
+  const mn = parseFloat($("#input-budget-min").value || 0);
+  const mx = parseFloat($("#input-budget-max").value || 0);
+  $("#budget-display").textContent = `₹${mn} – ₹${mx} L`;
+}
+
+/* ── Fuel buttons ─────────────────────────────────────────────────────── */
+function toggleFuel(fuel, btn) {
+  if (fuel === "all") {
+    selectedFuels = [];
+    document.querySelectorAll(".fuel-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    return;
+  }
+  document.querySelector(".fuel-btn[data-fuel='all']").classList.remove("active");
+  if (selectedFuels.includes(fuel)) {
+    selectedFuels = selectedFuels.filter(f => f !== fuel);
+    btn.classList.remove("active");
+  } else {
+    selectedFuels.push(fuel);
+    btn.classList.add("active");
+  }
+  if (!selectedFuels.length) {
+    document.querySelector(".fuel-btn[data-fuel='all']").classList.add("active");
+  }
+}
+
+/* ── Body type chips ──────────────────────────────────────────────────── */
+function buildBodyChips(bodyTypes) {
+  const el = $("#body-type-chips");
+  bodyTypes.forEach(bt => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.body = bt;
+    b.textContent = pretty(bt);
+    b.className = "body-btn px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition";
+    b.onclick = () => {
+      if (selectedBodies.includes(bt)) {
+        selectedBodies = selectedBodies.filter(x => x !== bt);
+        b.classList.remove("active");
+      } else {
+        selectedBodies.push(bt);
+        b.classList.add("active");
+      }
+    };
+    el.appendChild(b);
+  });
+}
+
+/* ── Transmission ─────────────────────────────────────────────────────── */
+function setTrans(t, btn) {
+  selectedTrans = t;
+  document.querySelectorAll(".trans-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+/* ── Feature checkboxes ───────────────────────────────────────────────── */
+function buildFeatureChecks(features) {
+  const el = $("#feature-checks");
+  features.forEach(f => {
+    const label = document.createElement("label");
+    label.className = "feat-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+    label.innerHTML = `<input type="checkbox" data-feat="${f.key}" class="rounded text-brand-600 focus:ring-0">
+                       <span class="font-semibold text-slate-700">${f.label}</span>`;
+    el.appendChild(label);
+  });
+}
+
+/* ── Priority checkboxes ──────────────────────────────────────────────── */
+function buildPriorityChecks(priorities) {
+  const el = $("#priority-checks");
+  const icons = { safety:"🛡", performance:"⚡", space:"📦", efficiency:"🍃" };
+  priorities.forEach(p => {
+    const label = document.createElement("label");
+    label.className = "feat-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+    label.innerHTML = `<input type="checkbox" data-prio="${p}" class="rounded text-brand-600 focus:ring-0">
+                       <span class="font-semibold text-slate-700">${icons[p] || ""} ${pretty(p)}</span>`;
+    el.appendChild(label);
+  });
+}
+
+/* ── Read current preferences from UI ────────────────────────────────── */
+function getPreferences() {
+  const feats = [...document.querySelectorAll('[data-feat]:checked')].map(x => x.dataset.feat);
+  const prios = [...document.querySelectorAll('[data-prio]:checked')].map(x => x.dataset.prio);
+  const seats = $("#input-seats").value;
+  return {
+    budget_min: parseFloat($("#input-budget-min").value || 0),
+    budget_max: parseFloat($("#input-budget-max").value || 10),
+    body_types: [...selectedBodies],
+    fuels: [...selectedFuels],
+    fuel_strict: $("#fuel-strict").checked,
+    transmission: selectedTrans,
+    transmission_strict: $("#trans-strict").checked,
+    must_have_features: feats,
+    priorities: prios,
+    min_seats: seats ? parseInt(seats) : null,
+  };
+}
+
+/* ── Run AI recommendation ────────────────────────────────────────────── */
+async function runAIMatch() {
+  const icon = $("#ai-spin-icon");
+  icon.classList.add("animate-spin");
+  $("#results-meta").textContent = "Calculating AI matches…";
+  $("#parsed-tags-row").classList.add("hidden");
+  $("#parsed-tags-row").innerHTML = "";
+  try {
+    const prefs = getPreferences();
+    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 10 });
+    lastRecId = out.recommendation_id;
+    currentResults = out.results;
+    renderVehicleCards(out);
+  } catch (err) {
+    showToast("Recommendation failed: " + err.message, "error");
+    $("#results-meta").textContent = "Error — check console";
+  } finally {
+    icon.classList.remove("animate-spin");
+  }
+}
+
+/* ── NLP search ───────────────────────────────────────────────────────── */
+async function runNLPSearch() {
+  const q = $("#nlp-search").value.trim();
   if (!q) return;
-  $("#status").textContent = "Searching…";
-  $("#parsedTags").hidden = true;
+  const icon = $("#ai-spin-icon");
+  icon.classList.add("animate-spin");
+  switchTab("recommender");
+  $("#results-meta").textContent = "Searching…";
   try {
     const out = await api("/api/search", { user_id: USER_ID, q, k: 10 });
     lastRecId = out.recommendation_id;
-    if (out.parsed_tags.length) {
-      $("#parsedTags").innerHTML = out.parsed_tags.map(t => `<span class="parsed-tag">${t}</span>`).join("");
-      $("#parsedTags").hidden = false;
+    currentResults = out.results;
+    if (out.parsed_tags?.length) {
+      const row = $("#parsed-tags-row");
+      row.innerHTML = out.parsed_tags.map(t =>
+        `<span class="bg-brand-50 text-brand-700 border border-brand-200 px-2.5 py-1 rounded-xl text-[11px] font-bold">${t}</span>`
+      ).join("");
+      row.classList.remove("hidden");
     }
-    render(out);
+    renderVehicleCards(out);
+    showToast(`Search complete — "${q}"`, "success");
   } catch (err) {
-    $("#status").textContent = "Search failed: " + err.message;
+    showToast("Search failed: " + err.message, "error");
+    $("#results-meta").textContent = "Search error";
+  } finally {
+    icon.classList.remove("animate-spin");
   }
-});
+}
 
-$("#prefs").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  $("#parsedTags").hidden = true;
-  const seats = $("#minSeats").value;
-  const prefs = {
-    budget_min: parseFloat($("#budgetMin").value || 0),
-    budget_max: parseFloat($("#budgetMax").value),
-    body_types: picked("#bodyTypes"),
-    fuels: picked("#fuels"),
-    fuel_strict: $("#fuelStrict").checked,
-    transmission: picked("#transmission")[0] || "any",
-    must_have_features: picked("#features"),
-    priorities: picked("#priorities"),
-    min_seats: seats ? parseInt(seats) : null,
-  };
-  $("#status").textContent = "Finding matches…";
-  try {
-    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 10 });
-    lastRecId = out.recommendation_id;
-    render(out);
-  } catch (err) {
-    $("#status").textContent = "Couldn't get recommendations: " + err.message;
-  }
-});
+$("#nlp-search").addEventListener("keydown", e => { if (e.key === "Enter") runNLPSearch(); });
 
-function render(out) {
-  const list = $("#list"); list.innerHTML = "";
+/* ── Render vehicle cards (Toyota-style with images + features list) ─── */
+function renderVehicleCards(out) {
+  const container = $("#vehicle-cards-container");
+  container.innerHTML = "";
+
   if (!out.results.length) {
-    $("#status").textContent = "No vehicles pass your filters. Try raising the budget or relaxing strict options.";
+    $("#results-meta").textContent = `No vehicles pass your filters (${out.candidates_after_filters} checked).`;
+    container.innerHTML = `<div class="bg-white rounded-2xl border border-slate-200 shadow-card p-10 text-center text-slate-400 text-sm">
+      <i class="fa-solid fa-circle-xmark text-4xl mb-3 text-red-300 block"></i>
+      No matches. Try raising the budget or relaxing strict options.
+    </div>`;
     return;
   }
-  const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
-  $("#status").textContent = `${out.results.length} matches from ${out.candidates_after_filters} vehicles${personal}`;
 
-  out.results.forEach((r) => {
+  const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
+  $("#results-meta").textContent = `${out.results.length} matches from ${out.candidates_after_filters} vehicles${personal}`;
+
+  out.results.forEach((r, idx) => {
     const v = r.vehicle;
-    const li = document.createElement("li"); li.className = "card";
-    const eff = v.fuel === "electric" ? `${v.range_km} km range` : `${v.mileage_kmpl} ${v.fuel === "cng" ? "km/kg" : "km/l"}`;
-    li.innerHTML = `
-      <div class="card-head">
-        <div>
-          <div class="rank">#${r.rank}</div>
-          <div class="title">${v.make} ${v.model} <span class="meta">${v.variant}</span></div>
-          <div class="meta">₹${v.price_lakh.toFixed(1)} L · ${pretty(v.body_type)} · ${pretty(v.fuel)} ·
-            ${v.transmission.toUpperCase()} · ${v.seats} seats · ${eff}</div>
+    const isTop = idx === 0;
+    const imgUrl = v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv);
+    const eff = v.fuel === "electric" ? `${v.range_km ?? "—"} km range` : `${v.mileage_kmpl ?? "—"} km/l`;
+
+    const reasonsHtml = r.reasons.map(x =>
+      `<span class="bg-brand-50 text-brand-700 text-[10px] font-bold px-2.5 py-1 rounded-lg border border-brand-100 flex items-center gap-1 shrink-0">
+         <i class="fa-solid fa-check text-brand-600 text-[9px]"></i>${x}
+       </span>`
+    ).join("");
+
+    const warningsHtml = r.warnings.map(x =>
+      `<span class="bg-amber-50 text-amber-800 text-[10px] font-semibold px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1 shrink-0">
+         <i class="fa-solid fa-triangle-exclamation text-amber-500 text-[9px]"></i>${x}
+       </span>`
+    ).join("");
+
+    const topFeats = (v.features || []).slice(0, 4);
+    const featuresHtml = topFeats.length
+      ? `<ul class="grid grid-cols-2 gap-x-3 gap-y-1 text-xs mt-3">
+          ${topFeats.map(f => `<li class="flex items-center gap-1.5 text-slate-600">
+            <i class="fa-solid fa-circle-check text-[9px] text-brand-500 shrink-0"></i>
+            ${featuresMap[f] || pretty(f)}</li>`).join("")}
+         </ul>`
+      : "";
+
+    const card = document.createElement("div");
+    card.className = `bg-white rounded-2xl border ${isTop ? "border-brand-500 ring-1 ring-brand-500/20 shadow-md" : "border-slate-200 shadow-card"} p-5 transition-all hover:shadow-dropdown`;
+    card.innerHTML = `
+      <div class="flex flex-col sm:flex-row gap-5">
+        <!-- Car photo -->
+        <div class="sm:w-48 h-36 rounded-xl overflow-hidden relative shrink-0 bg-slate-100">
+          <img src="${imgUrl}" alt="${v.make} ${v.model}" class="w-full h-full object-cover"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="absolute inset-0 bg-gradient-to-br ${FUEL_COLORS[v.fuel]||'from-slate-300 to-slate-400'} items-center justify-center text-4xl hidden">
+            ${FUEL_EMOJI[v.fuel] || "🚗"}
+          </div>
+          <span class="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[9px] font-extrabold px-2 py-0.5 rounded-md">
+            ${FUEL_EMOJI[v.fuel] || ""} ${pretty(v.fuel)}
+          </span>
+          ${isTop ? '<span class="absolute bottom-2 right-2 bg-brand-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-md">Top Match</span>' : ""}
         </div>
-        <div class="match"><b>${r.match_pct}%</b><small>match</small></div>
-      </div>
-      <div class="bar"><span style="width:${Math.min(100, r.match_pct)}%"></span></div>
-      <ul class="why">
-        ${r.reasons.map((x) => `<li>${x}</li>`).join("")}
-        ${r.warnings.map((x) => `<li class="warn">${x}</li>`).join("")}
-      </ul>
-      <div class="actions">
-        <button data-a="save">♡ Save</button>
-        <button data-a="compare">⇄ Compare</button>
-        <button data-a="test_drive" class="cta">Book test drive</button>
-        <span class="spacer"></span>
-        <button data-a="up" title="Good recommendation">👍</button>
-        <button data-a="down" title="Not relevant">👎</button>
+
+        <div class="flex-1 min-w-0 flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h4 class="font-extrabold text-slate-900 text-base">${v.make} ${v.model}</h4>
+                  <span class="text-xs font-semibold text-slate-400">${v.variant}</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">${pretty(v.body_type)} · ${v.transmission?.toUpperCase()} · ${v.seats} seats · ${eff}</p>
+              </div>
+              <div class="${isTop ? "bg-brand-600 match-badge-pulse" : "bg-slate-800"} text-white px-3 py-1 rounded-xl text-center shadow-sm shrink-0">
+                <span class="text-xs font-black">${r.match_pct}%</span>
+                <span class="text-[8px] block uppercase font-bold ${isTop ? "text-blue-200" : "text-slate-400"}">AI Match</span>
+              </div>
+            </div>
+
+            <!-- Reason & warning pills -->
+            <div class="flex flex-wrap gap-1.5 mt-3">
+              ${reasonsHtml}${warningsHtml}
+            </div>
+
+            <!-- Features list (Toyota-style) -->
+            ${featuresHtml}
+          </div>
+
+          <!-- Price & action bar -->
+          <div class="flex items-center justify-between pt-4 mt-3 border-t border-slate-100 flex-wrap gap-2">
+            <div>
+              <span class="text-lg font-black text-slate-900">₹${v.price_lakh?.toFixed(1)} L</span>
+              <span class="text-xs text-slate-400 font-semibold"> · ${v.power_bhp} bhp · Safety ${v.safety_rating}★ · ${v.seats} seats</span>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <button data-a="save"    data-vid="${v.id}" data-rank="${r.rank}" class="action-btn border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-semibold transition">♡ Save</button>
+              <button data-a="compare" data-vid="${v.id}" data-rank="${r.rank}" class="action-btn border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 px-3 py-1.5 rounded-xl text-xs font-semibold transition">⇄ Compare</button>
+              <button data-a="test_drive" data-vid="${v.id}" data-rank="${r.rank}" data-vname="${v.make} ${v.model} ${v.variant}"
+                class="action-btn bg-brand-600 hover:bg-brand-700 text-white px-4 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-key text-[10px]"></i> Schedule Drive
+              </button>
+              <button data-a="up"   data-vid="${v.id}" data-rank="${r.rank}" title="Good match" class="action-btn border border-slate-200 bg-slate-50 px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-100 transition">👍</button>
+              <button data-a="down" data-vid="${v.id}" data-rank="${r.rank}" title="Not relevant" class="action-btn border border-slate-200 bg-slate-50 px-2.5 py-1.5 rounded-xl text-xs hover:bg-slate-100 transition">👎</button>
+            </div>
+          </div>
+        </div>
       </div>`;
-    // Any engagement with a card counts as one click on the recommendation (for CTR).
-    let clicked = false;
-    const clickOnce = () => { if (!clicked) { clicked = true; logEvent("click", v.id, r.rank); } };
-    li.querySelector(".card-head").onclick = () => { clickOnce(); toast("Opened details (click logged)"); };
-    li.querySelectorAll(".actions button").forEach((b) => {
-      b.onclick = () => {
-        const a = b.dataset.a;
-        if (a !== "up" && a !== "down") clickOnce();
+
+    // Wire action buttons
+    card.querySelectorAll(".action-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const a    = btn.dataset.a;
+        const vid  = parseInt(btn.dataset.vid);
+        const rank = parseInt(btn.dataset.rank);
         if (a === "up" || a === "down") {
-          logEvent("feedback", v.id, r.rank, a === "up" ? 1 : 0);
-          toast("Thanks for the feedback");
-        } else if (a === "test_drive") {
-          testDriveTarget = { vehicleId: v.id, rank: r.rank, recId: lastRecId, btn: b };
-          $("#tdDate").min = new Date().toISOString().split("T")[0];
-          $("#testDriveDlg").showModal();
+          logEvent("feedback", vid, rank, a === "up" ? 1 : 0);
+          showToast("Thanks for the feedback", "success");
           return;
-        } else if (a === "compare") {
-          const idx = compareList.findIndex((c) => c.vehicle.id === v.id);
-          if (idx !== -1) {
-            compareList.splice(idx, 1);
-            b.textContent = "⇄ Compare"; b.classList.remove("added");
-          } else if (compareList.length < 3) {
-            compareList.push({ vehicle: v, match_pct: r.match_pct, rank: r.rank });
-            logEvent("compare", v.id, r.rank);
-            b.textContent = "✓ Added"; b.classList.add("added");
-          } else {
-            toast("Remove a car first to add another");
-          }
-          updateCompareBar();
-          return;
-        } else {
-          logEvent(a, v.id, r.rank);
-          toast(`${a[0].toUpperCase() + a.slice(1)}d`);
         }
-        b.classList.add("done"); b.disabled = true;
-      };
+        logEvent("click", vid, rank);
+        if (a === "test_drive") {
+          openBookingModal(vid, btn.dataset.vname, rank);
+        } else if (a === "compare") {
+          const inList = compareList.findIndex(c => c.vehicle.id === vid);
+          const resultItem = out.results.find(x => x.vehicle.id === vid);
+          if (inList !== -1) {
+            compareList.splice(inList, 1);
+            btn.textContent = "⇄ Compare";
+            btn.classList.remove("bg-brand-50","text-brand-700","border-brand-200");
+          } else if (compareList.length < 3 && resultItem) {
+            compareList.push(resultItem);
+            logEvent("compare", vid, rank);
+            btn.textContent = "✓ Added";
+            btn.classList.add("bg-brand-50","text-brand-700","border-brand-200");
+          } else {
+            showToast("Remove a car first (max 3)", "info");
+            return;
+          }
+          updateCompareCount();
+        } else if (a === "save") {
+          logEvent("save", vid, rank);
+          btn.textContent = "♥ Saved";
+          btn.disabled = true;
+          btn.classList.add("opacity-60");
+          showToast("Vehicle saved!", "success");
+        }
+      });
     });
-    list.appendChild(li);
+
+    container.appendChild(card);
   });
 }
 
-function updateCompareBar() {
-  const n = compareList.length;
-  $("#compareBar").hidden = n === 0;
-  $("#compareBarLabel").textContent = n === 1 ? "1 car selected" : `Comparing ${n} cars`;
+/* ── Compare ──────────────────────────────────────────────────────────── */
+function updateCompareCount() {
+  $("#compare-count").textContent = compareList.length;
 }
 
-const FEATURE_LABELS = {
-  sunroof: "Sunroof", six_airbags: "6 airbags", adas: "ADAS",
-  android_auto: "Android Auto / CarPlay", auto_climate: "Auto climate",
-  ventilated_seats: "Ventilated seats", camera_360: "360° camera",
-  cruise_control: "Cruise control", wireless_charging: "Wireless charging",
-  connected_car: "Connected car",
-};
-
-function renderCompareDialog() {
+function openCompareModal() {
+  if (compareList.length < 2) { showToast("Select at least 2 cars using ⇄ Compare", "info"); return; }
+  const FEAT_LABELS = {
+    sunroof:"Sunroof", six_airbags:"6 Airbags", adas:"ADAS", android_auto:"Android Auto",
+    auto_climate:"Auto Climate", ventilated_seats:"Ventilated Seats", camera_360:"360° Camera",
+    cruise_control:"Cruise Control", wireless_charging:"Wireless Charging", connected_car:"Connected Car",
+  };
   const items = compareList;
-  const v = (i) => items[i].vehicle;
 
-  function numRow(label, getter, lowerBetter = false) {
+  const headers = items.map(r =>
+    `<th class="text-center p-3 border-b-2 border-brand-200 bg-brand-50 font-extrabold text-slate-900">
+       ${r.vehicle.make} ${r.vehicle.model}<br>
+       <small class="font-normal text-slate-500">${r.vehicle.variant}</small>
+     </th>`
+  ).join("");
+
+  function row(label, getter, lowerBetter = false) {
     const vals = items.map(getter);
-    const nums = vals.map(Number).filter((n) => !isNaN(n));
+    const nums = vals.map(Number).filter(n => !isNaN(n));
     const best = nums.length ? (lowerBetter ? Math.min(...nums) : Math.max(...nums)) : null;
-    const cells = vals.map((val) => {
-      const isBest = best !== null && !isNaN(Number(val)) && Number(val) === best;
-      const display = val == null ? "—" : val;
-      return `<td>${isBest ? `<span class="cmp-best">${display}</span>` : display}</td>`;
-    }).join("");
-    return `<tr><td class="row-hdr">${label}</td>${cells}</tr>`;
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="p-3 text-slate-500 font-semibold text-left whitespace-nowrap">${label}</td>
+      ${vals.map((v, i) => {
+        const isBest = best !== null && !isNaN(Number(v)) && Number(v) === best;
+        return `<td class="p-3 text-center font-bold ${isBest ? "text-emerald-600" : "text-slate-800"}">${v == null ? "—" : v}</td>`;
+      }).join("")}
+    </tr>`;
   }
-
   function textRow(label, getter) {
-    return `<tr><td class="row-hdr">${label}</td>${items.map((item) =>
-      `<td>${getter(item)}</td>`).join("")}</tr>`;
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="p-3 text-slate-500 font-semibold text-left">${label}</td>
+      ${items.map(r => `<td class="p-3 text-center font-semibold text-slate-800">${getter(r)}</td>`).join("")}
+    </tr>`;
   }
-
-  const headers = items.map((item) =>
-    `<th>${item.vehicle.make} ${item.vehicle.model}<br><small style="color:var(--muted);font-weight:400">${item.vehicle.variant}</small></th>`
+  const featRows = Object.entries(FEAT_LABELS).map(([k, l]) =>
+    `<tr class="border-b border-slate-100 hover:bg-slate-50">
+       <td class="p-3 text-slate-500 font-semibold text-left">${l}</td>
+       ${items.map(r => `<td class="p-3 text-center">${(r.vehicle.features||[]).includes(k) ? '<span class="text-emerald-600 font-bold">✓</span>' : '<span class="text-slate-300">—</span>'}</td>`).join("")}
+     </tr>`
   ).join("");
 
-  const featureRows = Object.entries(FEATURE_LABELS).map(([key, label]) =>
-    `<tr><td class="row-hdr">${label}</td>${items.map((item) =>
-      `<td style="color:${(item.vehicle.features || []).includes(key) ? "var(--accent)" : "var(--muted)"}">${
-        (item.vehicle.features || []).includes(key) ? "✓" : "—"}</td>`
-    ).join("")}</tr>`
-  ).join("");
-
-  $("#compareBody").innerHTML = `
-    <table class="cmp-table">
-      <thead><tr><th class="row-hdr"></th>${headers}</tr></thead>
+  $("#compare-grid").innerHTML = `
+    <table class="w-full text-xs border-collapse">
+      <thead><tr><th class="p-3 text-left text-slate-400 font-bold uppercase border-b-2 border-slate-200 bg-slate-50"></th>${headers}</tr></thead>
       <tbody>
-        ${numRow("Match %", (item) => item.match_pct)}
-        ${numRow("Price (₹ lakh)", (item) => item.vehicle.price_lakh?.toFixed(1), true)}
-        ${textRow("Body type", (item) => pretty(item.vehicle.body_type))}
-        ${textRow("Fuel", (item) => pretty(item.vehicle.fuel))}
-        ${textRow("Transmission", (item) => item.vehicle.transmission?.toUpperCase())}
-        ${numRow("Seats", (item) => item.vehicle.seats)}
-        ${numRow("Power (bhp)", (item) => item.vehicle.power_bhp)}
-        ${numRow("Boot (litres)", (item) => item.vehicle.boot_litres)}
-        ${numRow("Safety rating", (item) => item.vehicle.safety_rating)}
-        ${textRow("Efficiency", (item) => item.vehicle.fuel === "electric"
-          ? `${item.vehicle.range_km} km range`
-          : `${item.vehicle.mileage_kmpl} ${item.vehicle.fuel === "cng" ? "km/kg" : "km/l"}`)}
-        ${featureRows}
+        ${row("Match %",  r => r.match_pct)}
+        ${row("Price (₹L)", r => r.vehicle.price_lakh?.toFixed(1), true)}
+        ${textRow("Body Type", r => pretty(r.vehicle.body_type))}
+        ${textRow("Fuel",      r => pretty(r.vehicle.fuel))}
+        ${textRow("Transmission", r => r.vehicle.transmission?.toUpperCase())}
+        ${row("Seats",       r => r.vehicle.seats)}
+        ${row("Power (bhp)", r => r.vehicle.power_bhp)}
+        ${row("Boot (L)",    r => r.vehicle.boot_litres)}
+        ${row("Safety ★",   r => r.vehicle.safety_rating)}
+        ${textRow("Efficiency", r => r.vehicle.fuel === "electric" ? `${r.vehicle.range_km} km` : `${r.vehicle.mileage_kmpl} km/l`)}
+        ${featRows}
       </tbody>
     </table>`;
-  $("#compareDlg").showModal();
+  $("#compare-modal").classList.remove("hidden");
 }
 
-$("#compareViewBtn").onclick = () => {
-  if (compareList.length < 2) { toast("Add at least 2 cars to compare"); return; }
-  try {
-    const dlg = $("#compareDlg");
-    if (dlg.open) dlg.close();
-    renderCompareDialog();
-  } catch (err) {
-    toast("Compare failed: " + err.message);
-    console.error("renderCompareDialog error:", err);
-  }
-};
+function closeCompareModal() { $("#compare-modal").classList.add("hidden"); }
 
-$("#compareClearBtn").onclick = () => {
-  compareList = [];
-  updateCompareBar();
-  document.querySelectorAll(".actions button[data-a=compare]").forEach((b) => {
-    b.textContent = "⇄ Compare"; b.classList.remove("added");
+/* ── License scan simulation & route selector ─────────────────────────── */
+
+function setRoute(btn) {
+  document.querySelectorAll(".route-btn").forEach(b => {
+    b.classList.remove("border-2","border-brand-500","bg-brand-50");
+    b.classList.add("border","border-slate-200","bg-slate-50");
+    b.querySelector("span").classList.remove("text-brand-700");
+    b.querySelector("span").classList.add("text-slate-700");
   });
-};
+  btn.classList.add("border-2","border-brand-500","bg-brand-50");
+  btn.classList.remove("border","border-slate-200","bg-slate-50");
+  btn.querySelector("span").classList.add("text-brand-700");
+  btn.querySelector("span").classList.remove("text-slate-700");
+}
 
-$("#bookingsBtn").onclick = async () => {
-  const bookings = await api("/api/bookings/test-drive");
-  const body = $("#bookingsBody");
-  if (!bookings.length) {
-    body.innerHTML = `<p class="meta">No bookings yet.</p>`;
-  } else {
-    body.innerHTML = `
-      <table class="bookings-table">
-        <thead><tr>
-          <th class="td-center">Test drive taken</th>
-          <th>Vehicle</th><th>Name</th><th>Phone</th><th>City</th><th>Branch</th>
-          <th>Preferred date</th><th>Sales officer</th><th>Booked at</th>
-        </tr></thead>
-        <tbody>${bookings.map((b) => `
-          <tr data-bid="${b.id}">
-            <td class="td-center tick-cell">
-              <button class="tick-btn${b.completed ? " ticked" : ""}" data-bid="${b.id}" title="Toggle">
-                ${b.completed ? "✓" : "○"}
-              </button>
-              <button class="save-tick-btn" data-bid="${b.id}" hidden>Save</button>
-            </td>
-            <td>${b.vehicle_id}</td>
-            <td>${b.name}</td>
-            <td>${b.phone}</td>
-            <td>${b.city}</td>
-            <td>${b.branch || "—"}</td>
-            <td>${b.preferred_date}</td>
-            <td><input class="td-input td-text" type="text" value="${b.sales_officer || ""}" placeholder="Enter name" data-field="sales_officer" /></td>
-            <td>${new Date(b.ts * 1000).toLocaleString()}</td>
-          </tr>`).join("")}
+/* ── Test drive booking ───────────────────────────────────────────────── */
+function openBookingModal(vehicleId, vehicleName, rank) {
+  bookingTarget = { vehicleId, vehicleName, rank };
+  $("#modal-vehicle-title").textContent = vehicleName;
+  $("#td-date").min = new Date().toISOString().split("T")[0];
+  // Pre-fill customer name from the active lead banner
+  const leadName = $("#active-lead-name")?.textContent || "";
+  if (leadName && leadName !== "New Walk-in" && !$("#td-name").value) {
+    $("#td-name").value = leadName;
+  }
+  // Reset route to first option
+  document.querySelectorAll(".route-btn").forEach((b, i) => setRoute(i === 0 ? b : b));
+  const first = document.querySelector(".route-btn");
+  if (first) setRoute(first);
+  $("#schedule-modal").classList.remove("hidden");
+}
+
+function closeBookingModal() {
+  $("#schedule-modal").classList.add("hidden");
+  bookingTarget = null;
+  $("#booking-form").reset();
+}
+
+async function confirmBooking(e) {
+  e.preventDefault();
+  if (!bookingTarget) return;
+  const submitBtn = $("#booking-form").querySelector("[type=submit]");
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Booking…';
+  try {
+    await api("/api/bookings/test-drive", {
+      user_id:           USER_ID,
+      vehicle_id:        bookingTarget.vehicleId,
+      name:              $("#td-name").value,
+      phone:             $("#td-phone").value,
+      city:              $("#td-city").value,
+      branch:            $("#td-branch").value || "",
+      preferred_date:    $("#td-date").value,
+      sales_officer:     $("#td-officer").value || "",
+      recommendation_id: lastRecId,
+    });
+    const bookedName = bookingTarget.vehicleName;
+    closeBookingModal();
+    showToast(`Test drive booked for ${bookedName}!`, "success");
+    loadFleetStats();   // refresh sidebar stats
+  } catch (err) {
+    showToast("Booking failed: " + err.message, "error");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="fa-solid fa-key"></i> Confirm &amp; Release Key';
+  }
+}
+
+/* ── Load lead preset ─────────────────────────────────────────────────── */
+function loadLead(key) {
+  const p = LEAD_PROFILES[key];
+  if (!p) return;
+  $("#active-lead-name").textContent = p.name;
+  $("#active-lead-sub").textContent  = p.sub;
+  $("#input-budget-min").value = p.budgetMin;
+  $("#input-budget-max").value = p.budgetMax;
+  updateBudgetDisplay();
+
+  // Fuels
+  selectedFuels = [...p.fuels];
+  document.querySelectorAll(".fuel-btn").forEach(b => {
+    b.classList.toggle("active", selectedFuels.includes(b.dataset.fuel));
+    if (b.dataset.fuel === "all") b.classList.toggle("active", !selectedFuels.length);
+  });
+
+  // Body types
+  selectedBodies = [...p.bodies];
+  document.querySelectorAll(".body-btn").forEach(b => b.classList.toggle("active", selectedBodies.includes(b.dataset.body)));
+
+  // Transmission
+  setTrans(p.trans, document.querySelector(`.trans-btn[data-trans="${p.trans}"]`));
+
+  // Seats
+  $("#input-seats").value = p.seats;
+
+  // Features
+  document.querySelectorAll("[data-feat]").forEach(cb => { cb.checked = p.features.includes(cb.dataset.feat); });
+
+  // Priorities
+  document.querySelectorAll("[data-prio]").forEach(cb => { cb.checked = p.priorities.includes(cb.dataset.prio); });
+
+  showToast(`Loaded: ${p.name}`, "info");
+  runAIMatch();
+}
+
+/* ── Reset filters ────────────────────────────────────────────────────── */
+function resetFilters() {
+  $("#input-budget-min").value = 10;
+  $("#input-budget-max").value = 18;
+  updateBudgetDisplay();
+  selectedFuels  = [];
+  selectedBodies = [];
+  selectedTrans  = "any";
+  document.querySelectorAll(".fuel-btn").forEach(b  => b.classList.toggle("active", b.dataset.fuel === "all"));
+  document.querySelectorAll(".body-btn").forEach(b  => b.classList.remove("active"));
+  document.querySelectorAll(".trans-btn").forEach(b => b.classList.toggle("active", b.dataset.trans === "any"));
+  document.querySelectorAll("[data-feat],[data-prio]").forEach(cb => cb.checked = false);
+  $("#input-seats").value = "";
+  $("#fuel-strict").checked = false;
+  $("#trans-strict").checked = false;
+  $("#active-lead-name").textContent = "New Walk-in";
+  $("#active-lead-sub").textContent  = "Set preferences below and click Recalculate.";
+  showToast("Filters reset", "info");
+}
+
+/* ── Lead Inbox ───────────────────────────────────────────────────────── */
+async function loadLeadInbox() {
+  try {
+    const bookings = await api("/api/bookings/test-drive");
+    const badge = $("#leads-badge");
+    if (bookings.length) { badge.textContent = bookings.length; badge.classList.remove("hidden"); }
+
+    const container = $("#leads-table-container");
+    if (!bookings.length) {
+      container.innerHTML = `<p class="text-center text-slate-400 py-8 text-sm">No bookings yet. Customers who book test drives will appear here.</p>`;
+      return;
+    }
+    container.innerHTML = `
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase border-b border-slate-200">
+            <th class="py-3 px-4">Done</th><th class="py-3 px-4">Customer</th>
+            <th class="py-3 px-4">Vehicle</th><th class="py-3 px-4">City / Branch</th>
+            <th class="py-3 px-4">Preferred Date</th><th class="py-3 px-4">Sales Officer</th>
+            <th class="py-3 px-4">Booked At</th><th class="py-3 px-4 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          ${bookings.map(b => `
+            <tr class="hover:bg-slate-50 transition" data-bid="${b.id}">
+              <td class="py-3 px-4">
+                <button class="tick-btn w-8 h-8 rounded-full border-2 ${b.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-400"} flex items-center justify-center text-sm font-bold hover:border-emerald-400 transition"
+                  data-bid="${b.id}" data-completed="${b.completed ? 1 : 0}" title="Toggle test drive taken">
+                  ${b.completed ? "✓" : "○"}
+                </button>
+              </td>
+              <td class="py-3 px-4 font-bold text-slate-900">${b.name}<br>
+                <span class="text-[10px] text-slate-400 font-normal">${b.phone}</span></td>
+              <td class="py-3 px-4 text-brand-600 font-semibold">Vehicle #${b.vehicle_id}</td>
+              <td class="py-3 px-4 text-slate-600">${b.city}${b.branch ? ` · ${b.branch}` : ""}</td>
+              <td class="py-3 px-4 font-semibold">${b.preferred_date}</td>
+              <td class="py-3 px-4">
+                <input type="text" class="officer-input border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 text-slate-800 w-32 focus:outline-none focus:border-brand-500"
+                  value="${b.sales_officer || ""}" placeholder="Assign officer" data-bid="${b.id}">
+              </td>
+              <td class="py-3 px-4 text-slate-400">${new Date(b.ts * 1000).toLocaleString("en-IN", {dateStyle:"short",timeStyle:"short"})}</td>
+              <td class="py-3 px-4 text-right">
+                <span class="${b.completed ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"} text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  ${b.completed ? "Taken" : "Pending"}
+                </span>
+              </td>
+            </tr>`).join("")}
         </tbody>
       </table>`;
 
-    body.querySelectorAll(".tick-btn").forEach((btn) => {
-      btn.onclick = () => {
-        const nowTicked = !btn.classList.contains("ticked");
-        btn.classList.toggle("ticked", nowTicked);
-        btn.textContent = nowTicked ? "✓" : "○";
-        const saveBtn = btn.closest(".tick-cell").querySelector(".save-tick-btn");
-        saveBtn.hidden = false;
-      };
-    });
-
-    body.querySelectorAll(".save-tick-btn").forEach((saveBtn) => {
-      saveBtn.onclick = async () => {
-        const tickBtn = saveBtn.closest(".tick-cell").querySelector(".tick-btn");
-        const completed = tickBtn.classList.contains("ticked");
-        saveBtn.disabled = true;
-        saveBtn.textContent = "Saving…";
+    // Tick toggle
+    container.querySelectorAll(".tick-btn").forEach(btn => {
+      btn.onclick = async () => {
+        const completed = btn.dataset.completed !== "1";
+        btn.disabled = true;
         try {
-          await api(`/api/bookings/test-drive/${saveBtn.dataset.bid}`, { completed }, "PATCH");
-          saveBtn.hidden = true;
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Save";
-          toast(completed ? "Test drive marked as taken" : "Marked as not taken");
+          await api(`/api/bookings/test-drive/${btn.dataset.bid}`, { completed }, "PATCH");
+          showToast(completed ? "Marked as test drive taken" : "Marked as pending", "success");
+          loadLeadInbox();
         } catch (err) {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "Save";
-          toast("Save failed: " + err.message);
-        }
+          showToast("Update failed: " + err.message, "error");
+        } finally { btn.disabled = false; }
       };
     });
 
-    body.querySelectorAll(".td-input").forEach((input) => {
-      input.onchange = async () => {
-        const row = input.closest("tr[data-bid]");
+    // Officer name update
+    container.querySelectorAll(".officer-input").forEach(inp => {
+      inp.addEventListener("change", async () => {
         try {
-          await api(`/api/bookings/test-drive/${row.dataset.bid}`, { [input.dataset.field]: input.value || null }, "PATCH");
-          toast("Saved");
-        } catch (err) {
-          toast("Save failed: " + err.message);
-        }
-      };
+          await api(`/api/bookings/test-drive/${inp.dataset.bid}`, { sales_officer: inp.value || null }, "PATCH");
+          showToast("Officer name saved", "success");
+        } catch (err) { showToast("Save failed: " + err.message, "error"); }
+      });
     });
-  }
-  $("#bookingsDlg").showModal();
-};
+  } catch (err) { showToast("Could not load leads: " + err.message, "error"); }
+}
 
-$("#metricsBtn").onclick = async () => {
-  const m = await api("/api/metrics");
-  const pct = (x) => (x == null ? "—" : (x * 100).toFixed(1) + "%");
-  $("#metricsBody").innerHTML = `
-    <div class="kpis">
-      <div class="kpi"><b>${pct(m.ctr)}</b><span>Recommendation CTR (${m.recommendation_clicks}/${m.impressions})</span></div>
-      <div class="kpi"><b>${pct(m.test_drive_rate)}</b><span>Users who booked a test drive (${m.test_drive_bookings} bookings)</span></div>
-      <div class="kpi"><b>${pct(m.lead_conversion_rate)}</b><span>Lead conversion (${m.purchases} purchases)</span></div>
-      <div class="kpi"><b>${pct(m.csat)}</b><span>Satisfaction 👍 (${m.feedback_responses} responses)</span></div>
-    </div>
-    <p class="meta">CTR by position: ${m.ctr_by_position.map((p) => `#${p.position} ${pct(p.ctr)}`).join(" · ") || "no data yet"}</p>`;
-  $("#metricsDlg").showModal();
-};
-
-$("#tdCancel").onclick = () => {
-  $("#testDriveDlg").close();
-  testDriveTarget = null;
-};
-
-$("#testDriveForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  if (!testDriveTarget) return;
-  const { vehicleId, recId, btn } = testDriveTarget;
+/* ── Test Drive Calendar (Schedule tab) ───────────────────────────────── */
+async function loadSchedule() {
   try {
-    await api("/api/bookings/test-drive", {
-      user_id: USER_ID,
-      vehicle_id: vehicleId,
-      name: $("#tdName").value,
-      phone: $("#tdPhone").value,
-      city: $("#tdCity").value,
-      branch: $("#tdBranch")?.value ?? "",
-      preferred_date: $("#tdDate").value,
-      sales_officer: $("#tdSalesOfficer")?.value ?? "",
-      recommendation_id: recId,
+    const bookings = await api("/api/bookings/test-drive");
+    const container = $("#schedule-container");
+    if (!bookings.length) {
+      container.innerHTML = `<p class="text-center text-slate-400 py-8 text-sm">No test drives scheduled yet.</p>`;
+      return;
+    }
+    container.innerHTML = bookings.map(b => `
+      <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-3">
+          <div class="w-14 h-14 rounded-xl ${b.completed ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-600"} flex flex-col items-center justify-center font-black text-xs shrink-0">
+            ${b.preferred_date.slice(5).replace("-","/")}
+          </div>
+          <div>
+            <p class="font-bold text-xs text-slate-900">${b.name} · Vehicle #${b.vehicle_id}</p>
+            <p class="text-[11px] text-slate-500">${b.city}${b.branch ? " · " + b.branch : ""}${b.sales_officer ? " · " + b.sales_officer : ""}</p>
+            <p class="text-[11px] text-slate-400">${b.phone}</p>
+          </div>
+        </div>
+        <span class="${b.completed ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"} text-[10px] font-bold px-2.5 py-1 rounded-full">
+          ${b.completed ? "Test Drive Taken" : "Scheduled"}
+        </span>
+      </div>`
+    ).join("");
+  } catch (err) { showToast("Could not load schedule: " + err.message, "error"); }
+}
+
+/* ── Fleet stats (sidebar + fleet tab) ───────────────────────────────── */
+async function loadFleetStats() {
+  try {
+    const [health, metrics, bookings] = await Promise.all([
+      api("/api/health"),
+      api("/api/metrics"),
+      api("/api/bookings/test-drive"),
+    ]);
+    $("#vehicles-count").textContent = `${health.vehicles} vehicles in catalog`;
+    const n = bookings.length;
+    const goal = 20;
+    const pct = Math.min(100, Math.round(n / goal * 100));
+    $("#goal-label").textContent = `${n} Booked`;
+    $("#goal-bar").style.width = pct + "%";
+
+    const pctFmt = x => x == null ? "—" : (x * 100).toFixed(1) + "%";
+    $("#topbar-ctr").innerHTML = `<i class="fa-solid fa-bullseye"></i><span>CTR ${pctFmt(metrics.ctr)}</span>`;
+    $("#topbar-ctr").classList.remove("hidden");
+    $("#topbar-tdr").innerHTML = `<i class="fa-solid fa-car-side"></i><span>Test drive rate ${pctFmt(metrics.test_drive_rate)}</span>`;
+    $("#topbar-tdr").classList.remove("hidden");
+  } catch (_) {}
+}
+
+async function loadFleet() {
+  try {
+    const [health, metrics, bookings, vehicles] = await Promise.all([
+      api("/api/health"), api("/api/metrics"),
+      api("/api/bookings/test-drive"), api("/api/vehicles"),
+    ]);
+    $("#fleet-total").textContent = health.vehicles + " vehicles";
+    $("#fleet-booked").textContent = bookings.length;
+    $("#fleet-impressions").textContent = metrics.impressions;
+
+    // Fuel breakdown
+    const fuelCounts = {};
+    vehicles.forEach(v => { fuelCounts[v.fuel] = (fuelCounts[v.fuel] || 0) + 1; });
+    const grid = $("#fleet-fuel-grid");
+    grid.innerHTML = Object.entries(fuelCounts).map(([fuel, count]) => `
+      <div class="p-4 rounded-xl border border-slate-200 bg-gradient-to-br ${FUEL_COLORS[fuel] || "from-slate-200 to-slate-300"} bg-opacity-20 text-center">
+        <div class="text-2xl mb-1">${FUEL_EMOJI[fuel] || "🚗"}</div>
+        <div class="text-lg font-black text-slate-900">${count}</div>
+        <div class="text-xs font-semibold text-slate-600">${pretty(fuel)}</div>
+      </div>`
+    ).join("");
+  } catch (err) { showToast("Could not load fleet data: " + err.message, "error"); }
+}
+
+/* ── Analytics ────────────────────────────────────────────────────────── */
+async function loadAnalytics() {
+  try {
+    const m = await api("/api/metrics");
+    const pct = x => x == null ? "—" : (x * 100).toFixed(1) + "%";
+
+    $("#kpi-ctr").textContent  = pct(m.ctr);
+    $("#kpi-ctr-sub").textContent = `${m.recommendation_clicks} clicks / ${m.impressions} impressions`;
+    $("#kpi-tdr").textContent  = pct(m.test_drive_rate);
+    $("#kpi-tdr-sub").textContent = `${m.test_drive_bookings} bookings`;
+    $("#kpi-lcr").textContent  = pct(m.lead_conversion_rate);
+    $("#kpi-lcr-sub").textContent = `${m.purchases} purchases`;
+    $("#kpi-csat").textContent = pct(m.csat);
+    $("#kpi-csat-sub").textContent = `${m.feedback_responses} responses`;
+
+    // Funnel chart
+    const fCtx = document.getElementById("funnelChart").getContext("2d");
+    if (funnelChart) funnelChart.destroy();
+    funnelChart = new Chart(fCtx, {
+      type: "bar",
+      data: {
+        labels: ["Impressions", "Clicks", "Test Drives", "Purchases"],
+        datasets: [{
+          label: "Count",
+          data: [m.impressions, m.recommendation_clicks, m.test_drive_bookings, m.purchases],
+          backgroundColor: ["#94A3B8","#3B82F6","#2563EB","#10B981"],
+          borderRadius: 8,
+        }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { grid: { color: "#F1F5F9" }, beginAtZero: true },
+          x: { grid: { display: false } },
+        },
+      },
     });
-    toast("Test drive booked!");
-    btn.classList.add("done"); btn.disabled = true;
-    $("#testDriveDlg").close();
-    $("#testDriveForm").reset();
-    testDriveTarget = null;
+
+    // Position CTR chart
+    const pCtx = document.getElementById("positionChart").getContext("2d");
+    if (posChart) posChart.destroy();
+    const pos = m.ctr_by_position;
+    if (pos?.length) {
+      posChart = new Chart(pCtx, {
+        type: "bar",
+        data: {
+          labels: pos.map(p => `#${p.position}`),
+          datasets: [{
+            label: "CTR",
+            data: pos.map(p => p.ctr ? +(p.ctr * 100).toFixed(1) : 0),
+            backgroundColor: "#3B82F6",
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { grid: { color: "#F1F5F9" }, beginAtZero: true, title: { display: true, text: "CTR %" } },
+            x: { grid: { display: false }, title: { display: true, text: "Rank Position" } },
+          },
+        },
+      });
+    } else {
+      document.getElementById("positionChart").parentElement.innerHTML =
+        `<p class="text-slate-400 text-center py-16 text-sm">No position data yet — run some recommendations first.</p>`;
+    }
+  } catch (err) { showToast("Could not load analytics: " + err.message, "error"); }
+}
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+async function init() {
+  try {
+    const o = await api("/api/options");
+    o.features.forEach(f => { featuresMap[f.key] = f.label; });
+    buildBodyChips(o.body_types);
+    buildFeatureChecks(o.features);
+    buildPriorityChecks(o.priorities);
+    updateBudgetDisplay();
+    loadFleetStats();
+    // Pre-select sensible defaults so first run shows meaningful AI scores
+    const csuv = document.querySelector('.body-btn[data-body="compact_suv"]');
+    if (csuv) csuv.click();
+    const safetyBox = document.querySelector('[data-prio="safety"]');
+    if (safetyBox) safetyBox.checked = true;
+    const sunroofBox = document.querySelector('[data-feat="sunroof"]');
+    if (sunroofBox) sunroofBox.checked = true;
+    runAIMatch();
   } catch (err) {
-    toast("Booking failed: " + err.message);
+    showToast("Failed to load options from API", "error");
   }
-});
+}
 
 init();
