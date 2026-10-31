@@ -12,7 +12,7 @@ import re
 from . import config as C
 from .schemas import Preferences
 
-_DEFAULT_BUDGET_MAX = 100.0  # used when no budget is mentioned
+_DEFAULT_BUDGET_MAX = 300.0  # used when no budget is mentioned; covers full Toyota range incl. Land Cruiser
 
 
 def _s(pattern: str, text: str) -> re.Match | None:

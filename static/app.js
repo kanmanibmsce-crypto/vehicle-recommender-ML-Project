@@ -267,7 +267,7 @@ async function runAIMatch() {
   $("#parsed-tags-row").innerHTML = "";
   try {
     const prefs = getPreferences();
-    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 10 });
+    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 13 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     renderVehicleCards(out);
@@ -288,7 +288,7 @@ async function runNLPSearch() {
   switchTab("recommender");
   $("#results-meta").textContent = "Searching…";
   try {
-    const out = await api("/api/search", { user_id: USER_ID, q, k: 10 });
+    const out = await api("/api/search", { user_id: USER_ID, q, k: 13 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     if (out.parsed_tags?.length) {
