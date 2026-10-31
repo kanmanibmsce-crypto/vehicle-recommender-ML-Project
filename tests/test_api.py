@@ -10,7 +10,7 @@ def client(tmp_path):
 
 
 BODY = {"user_id": "test-user", "k": 5,
-        "preferences": {"budget_min": 10, "budget_max": 20, "body_types": ["compact_suv"],
+        "preferences": {"budget_min": 10, "budget_max": 25, "body_types": ["compact_suv"],
                         "transmission": "automatic", "must_have_features": ["sunroof"]}}
 
 

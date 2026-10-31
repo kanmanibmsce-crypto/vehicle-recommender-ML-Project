@@ -61,7 +61,8 @@ def test_results_are_ranked_and_explained(rec):
 
 
 def test_missing_features_are_flagged(rec):
-    out = rec.recommend(prefs(budget_min=5, budget_max=9, must_have_features=["adas"]), k=5)
+    # Urban Cruiser Taisor (₹12.78) lacks ADAS — should appear with a warning
+    out = rec.recommend(prefs(budget_min=10, budget_max=15, must_have_features=["adas"]), k=5)
     assert any("Missing: ADAS" in w for r in out["results"] for w in r["warnings"])
 
 
@@ -71,8 +72,8 @@ def test_impossible_filters_return_empty(rec):
 
 
 def test_implicit_profile_kicks_in(rec):
-    rec.store.log("u1", "test_drive", vehicle_id=37)   # Mahindra BE 6 (electric SUV)
-    rec.store.log("u1", "save", vehicle_id=19)         # Nexon EV
+    rec.store.log("u1", "test_drive", vehicle_id=5)    # Urban Cruiser Ebella (electric SUV)
+    rec.store.log("u1", "save", vehicle_id=4)          # Urban Cruiser Hyryder (hybrid SUV)
     out = rec.recommend(prefs(budget_max=30), user_id="u1", k=5)
     assert out["used_implicit_profile"] and out["alpha"] < 1
     assert out["results"][0]["vehicle"]["fuel"] == "electric"
