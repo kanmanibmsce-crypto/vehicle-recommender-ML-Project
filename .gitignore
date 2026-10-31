@@ -6,3 +6,9 @@ venv/
 data/events.db
 .env
 .DS_Store
+data/vehicles.csv.bak
+uvicorn_*.log
+take_screenshot.py
+dashboard_screenshot.png
+toyota vehicle pics/
+toyota.png

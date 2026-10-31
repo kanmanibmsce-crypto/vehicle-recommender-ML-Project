@@ -52,6 +52,22 @@ const BODY_IMAGES = {
   mpv:         "https://images.unsplash.com/photo-1590362891991-f776e747a588?w=600&auto=format&fit=crop&q=80",
 };
 const ELECTRIC_IMG = "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600&auto=format&fit=crop&q=80";
+
+const TOYOTA_IMAGES = {
+  "fortuner":              "/static/toyota_vehicles/fortuner.webp",
+  "innova hycross":        "/static/toyota_vehicles/hycross.webp",
+  "urban cruiser hyryder": "/static/toyota_vehicles/hyrider.webp",
+  "camry":                 "/static/toyota_vehicles/camry.jpg",
+  "innova crysta":         "/static/toyota_vehicles/crysta.jpg",
+  "hilux":                 "/static/toyota_vehicles/hilux.avif",
+  "vellfire":              "/static/toyota_vehicles/new-vellfire-white-2.webp",
+  "rumion":                "/static/toyota_vehicles/rumion.avif",
+  "urban cruiser taisor":  "/static/toyota_vehicles/taisor.webp",
+  "fortuner legender":     "/static/toyota_vehicles/legender.webp",
+  "land cruiser 300":      "/static/toyota_vehicles/LC.webp",
+  "urban cruiser ebella":  "/static/toyota_vehicles/ebella.avif",
+};
+
 let featuresMap = {};
 
 /* ── Indian quick-profile presets ─────────────────────────────────────── */
@@ -314,7 +330,8 @@ function renderVehicleCards(out) {
   out.results.forEach((r, idx) => {
     const v = r.vehicle;
     const isTop = idx === 0;
-    const imgUrl = v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv);
+    const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase()] : null;
+    const imgUrl = toyotaImg || (v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv));
     const eff = v.fuel === "electric" ? `${v.range_km ?? "—"} km range` : `${v.mileage_kmpl ?? "—"} km/l`;
 
     const reasonsHtml = r.reasons.map(x =>
