@@ -54,17 +54,26 @@ const BODY_IMAGES = {
 const ELECTRIC_IMG = "https://images.unsplash.com/photo-1560958089-b8a1929cea89?w=600&auto=format&fit=crop&q=80";
 
 const TOYOTA_IMAGES = {
+  "glanza":                "/static/toyota_vehicles/glanza.webp",
   "fortuner":              "/static/toyota_vehicles/fortuner.webp",
+  "fortuner legender":     "/static/toyota_vehicles/legender.webp",
   "innova hycross":        "/static/toyota_vehicles/hycross.webp",
-  "urban cruiser hyryder": "/static/toyota_vehicles/hyrider.webp",
-  "camry":                 "/static/toyota_vehicles/camry.jpg",
   "innova crysta":         "/static/toyota_vehicles/crysta.jpg",
+  "urban cruiser hyryder": "/static/toyota_vehicles/hyrider.webp",
+  "hyrider hybrid":        "/static/toyota_vehicles/hyrider.webp",
+  "hyrider cng":           "/static/toyota_vehicles/hyrider.webp",
+  "hyryder neo drive":     "/static/toyota_vehicles/hyrider.webp",
+  "camry white":           "/static/toyota_vehicles/camry2.webp",
+  "camry(other color)":    "/static/toyota_vehicles/camry.jpg",
   "hilux":                 "/static/toyota_vehicles/hilux.avif",
+  "hilux white":           "/static/toyota_vehicles/hilux.avif",
   "vellfire":              "/static/toyota_vehicles/new-vellfire-white-2.webp",
   "rumion":                "/static/toyota_vehicles/rumion.avif",
-  "urban cruiser taisor":  "/static/toyota_vehicles/taisor.webp",
-  "fortuner legender":     "/static/toyota_vehicles/legender.webp",
+  "rumion-neo drive":      "/static/toyota_vehicles/rumion.avif",
+  "urban cruiser taisor (white board)":  "/static/toyota_vehicles/taisor.webp?v=2",
+  "urban cruiser taisor (yellow board)": "/static/toyota_vehicles/taisor.webp?v=2",
   "land cruiser 300":      "/static/toyota_vehicles/LC.webp",
+  "land cruiser":          "/static/toyota_vehicles/LC.webp",
   "urban cruiser ebella":  "/static/toyota_vehicles/ebella.avif",
 };
 
@@ -282,7 +291,7 @@ async function runAIMatch() {
 /* ── NLP search ───────────────────────────────────────────────────────── */
 async function runNLPSearch() {
   const q = $("#nlp-search").value.trim();
-  if (!q) return;
+  if (!q) { runAIMatch(); return; }
   const icon = $("#ai-spin-icon");
   icon.classList.add("animate-spin");
   switchTab("recommender");
@@ -330,7 +339,7 @@ function renderVehicleCards(out) {
   out.results.forEach((r, idx) => {
     const v = r.vehicle;
     const isTop = idx === 0;
-    const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase()] : null;
+    const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase().trim()] : null;
     const imgUrl = toyotaImg || (v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv));
     const eff = v.fuel === "electric" ? `${v.range_km ?? "—"} km range` : `${v.mileage_kmpl ?? "—"} km/l`;
 
@@ -889,13 +898,6 @@ async function init() {
     buildPriorityChecks(o.priorities);
     updateBudgetDisplay();
     loadFleetStats();
-    // Pre-select sensible defaults so first run shows meaningful AI scores
-    const csuv = document.querySelector('.body-btn[data-body="compact_suv"]');
-    if (csuv) csuv.click();
-    const safetyBox = document.querySelector('[data-prio="safety"]');
-    if (safetyBox) safetyBox.checked = true;
-    const sunroofBox = document.querySelector('[data-feat="sunroof"]');
-    if (sunroofBox) sunroofBox.checked = true;
     runAIMatch();
   } catch (err) {
     showToast("Failed to load options from API", "error");

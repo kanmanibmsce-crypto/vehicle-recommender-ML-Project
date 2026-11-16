@@ -72,8 +72,8 @@ def test_impossible_filters_return_empty(rec):
 
 
 def test_implicit_profile_kicks_in(rec):
-    rec.store.log("u1", "test_drive", vehicle_id=5)    # Urban Cruiser Ebella (electric SUV)
-    rec.store.log("u1", "save", vehicle_id=4)          # Urban Cruiser Hyryder (hybrid SUV)
+    rec.store.log("u1", "test_drive", vehicle_id=59)   # Urban Cruiser Ebella (electric SUV)
+    rec.store.log("u1", "save", vehicle_id=46)         # Urban Cruiser Hyryder (hybrid SUV)
     out = rec.recommend(prefs(budget_max=30), user_id="u1", k=5)
     assert out["used_implicit_profile"] and out["alpha"] < 1
     assert out["results"][0]["vehicle"]["fuel"] == "electric"

@@ -1,0 +1,14 @@
+id,make,model,variant,body_type,fuel,transmission,price_lakh,power_bhp,seats,boot_litres,safety_rating,mileage_kmpl,range_km,features
+1,Toyota,Glanza,V (O) AMT,hatchback,petrol,amt,10.98,81.8,5,318.0,5,24.77,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+2,Toyota,Urban Cruiser Taisor,V 1.0 Turbo AT,compact_suv,petrol,automatic,12.78,98.6,5,,,19.86,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+3,Toyota,Rumion,V AT,mpv,petrol,automatic,14.21,102.0,7,,0,20.3,,sunroof|six_airbags|adas|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
+4,Toyota,Urban Cruiser Hyryder,V Hybrid 2WD,midsize_suv,hybrid,automatic,19.99,115.6,5,255.0,0,27.97,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+5,Toyota,Urban Cruiser Ebella,E3 61 kWh,midsize_suv,electric,automatic,23.6,171.6,5,,,,543.0,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+6,Toyota,Innova Crysta,ZX 7-seater,mpv,diesel,manual,26.63,148.0,7,,,,,six_airbags|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
+7,Toyota,Innova Hycross,ZX(O) Hybrid,mpv,hybrid,automatic,31.84,186.4,7,300.0,5,23.24,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+8,Toyota,Hilux,VX 4x4 AT,large_suv,diesel,automatic,36.69,201.0,5,,0,,,six_airbags|android_auto|camera_360|cruise_control|wireless_charging|connected_car
+9,Toyota,Fortuner,GR-S 4x4 Diesel AT,large_suv,diesel,automatic,50.46,201.0,7,296.0,,,,six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+10,Toyota,Fortuner Legender,4x4 AT,large_suv,diesel,automatic,48.29,201.0,7,296.0,,14.4,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+11,Toyota,Camry,Elegant 2.5 Hybrid,sedan,hybrid,automatic,48.69,227.0,5,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+12,Toyota,Vellfire,VIP Executive Lounge Hybrid,mpv,hybrid,automatic,130.0,190.0,7,,,19.28,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+13,Toyota,Land Cruiser 300,GR-S,large_suv,diesel,automatic,224.93,304.0,7,,,,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car

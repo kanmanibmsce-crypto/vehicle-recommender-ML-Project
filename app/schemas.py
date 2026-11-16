@@ -92,3 +92,20 @@ class SearchRequest(BaseModel):
 class SearchResponse(RecommendResponse):
     query: str
     parsed_tags: list[str]
+
+
+class CustomerProfileIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    sub: str = Field("", max_length=200)
+    budgetMin: float = Field(0, ge=0)
+    budgetMax: float = Field(100, gt=0)
+    fuels: list[str] = Field(default_factory=list)
+    bodies: list[str] = Field(default_factory=list)
+    trans: Literal["any", "automatic", "manual"] = "any"
+    seats: str = Field("", max_length=2)
+    features: list[str] = Field(default_factory=list)
+    priorities: list[str] = Field(default_factory=list)
+
+
+class CustomerProfile(CustomerProfileIn):
+    id: str

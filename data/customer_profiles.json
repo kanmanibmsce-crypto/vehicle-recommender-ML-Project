@@ -1,0 +1,41 @@
+[
+  {
+    "id": "kumar",
+    "name": "Raj & Priya Kumar",
+    "sub": "Family looking for 7-seat hybrid/EV SUV",
+    "budgetMin": 20,
+    "budgetMax": 28,
+    "fuels": ["hybrid", "electric"],
+    "bodies": ["midsize_suv", "large_suv", "mpv"],
+    "trans": "automatic",
+    "seats": "7",
+    "features": ["six_airbags", "adas", "camera_360"],
+    "priorities": ["safety", "space"]
+  },
+  {
+    "id": "mehta",
+    "name": "Dr. Mehta",
+    "sub": "Premium electric sedan, safety & performance",
+    "budgetMin": 30,
+    "budgetMax": 55,
+    "fuels": ["electric", "hybrid"],
+    "bodies": ["sedan", "compact_suv"],
+    "trans": "automatic",
+    "seats": "",
+    "features": ["sunroof", "adas", "ventilated_seats", "wireless_charging"],
+    "priorities": ["safety", "performance"]
+  },
+  {
+    "id": "ananya",
+    "name": "Ananya Sharma",
+    "sub": "First car — city commute, fuel efficiency",
+    "budgetMin": 8,
+    "budgetMax": 14,
+    "fuels": ["petrol", "electric"],
+    "bodies": ["hatchback", "compact_suv"],
+    "trans": "any",
+    "seats": "",
+    "features": ["android_auto", "auto_climate"],
+    "priorities": ["efficiency"]
+  }
+]

@@ -1,14 +1,81 @@
 id,make,model,variant,body_type,fuel,transmission,price_lakh,power_bhp,seats,boot_litres,safety_rating,mileage_kmpl,range_km,features
-1,Toyota,Glanza,V (O) AMT,hatchback,petrol,amt,10.98,81.8,5,318.0,5,24.77,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-2,Toyota,Urban Cruiser Taisor,V 1.0 Turbo AT,compact_suv,petrol,automatic,12.78,98.6,5,,,19.86,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
-3,Toyota,Rumion,V AT,mpv,petrol,automatic,14.21,102.0,7,,0,20.3,,sunroof|six_airbags|adas|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
-4,Toyota,Urban Cruiser Hyryder,V Hybrid 2WD,midsize_suv,hybrid,automatic,19.99,115.6,5,255.0,0,27.97,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-5,Toyota,Urban Cruiser Ebella,E3 61 kWh,midsize_suv,electric,automatic,23.6,171.6,5,,,,543.0,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-6,Toyota,Innova Crysta,ZX 7-seater,mpv,diesel,manual,26.63,148.0,7,,,,,six_airbags|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
-7,Toyota,Innova Hycross,ZX(O) Hybrid,mpv,hybrid,automatic,31.84,186.4,7,300.0,5,23.24,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-8,Toyota,Hilux,VX 4x4 AT,large_suv,diesel,automatic,36.69,201.0,5,,0,,,six_airbags|android_auto|camera_360|cruise_control|wireless_charging|connected_car
-9,Toyota,Fortuner,GR-S 4x4 Diesel AT,large_suv,diesel,automatic,50.46,201.0,7,296.0,,,,six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-10,Toyota,Fortuner Legender,4x4 AT,large_suv,diesel,automatic,48.29,201.0,7,296.0,,14.4,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
-11,Toyota,Camry,Elegant 2.5 Hybrid,sedan,hybrid,automatic,48.69,227.0,5,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-12,Toyota,Vellfire,VIP Executive Lounge Hybrid,mpv,hybrid,automatic,130.0,190.0,7,,,19.28,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
-13,Toyota,Land Cruiser 300,GR-S,large_suv,diesel,automatic,224.93,304.0,7,,,,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+1,Toyota,Glanza,1.2 L[E],hatchback,petrol,manual,9.43,61.0,5.0,318.0,,23.8,,six_airbags
+2,Toyota,Glanza,1.2 L[S],hatchback,petrol,manual,10.32,61.0,5.0,318.0,,23.8,,six_airbags|android_auto
+3,Toyota,Glanza,1.2 L[G],hatchback,petrol,manual,11.58,61.0,5.0,318.0,,23.8,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+4,Toyota,Glanza,1.2 L[V],hatchback,petrol,manual,13.14,61.0,5.0,318.0,,23.8,,six_airbags|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
+5,Toyota,Glanza,1.2 L[V O],hatchback,petrol,manual,14.21,61.0,5.0,318.0,,23.8,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+6,Toyota,Glanza,1.2 L[S],hatchback,petrol,automatic,11.07,61.0,5.0,318.0,,24.77,,six_airbags|android_auto
+7,Toyota,Glanza,1.2 L[G],hatchback,petrol,automatic,12.33,61.0,5.0,318.0,,24.77,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+8,Toyota,Glanza,1.2 L[V],hatchback,petrol,automatic,14.34,61.0,5.0,318.0,,24.77,,six_airbags|android_auto|auto_climate|cruise_control|wireless_charging|connected_car
+9,Toyota,Glanza,1.2 L[V O],hatchback,petrol,automatic,14.84,61.0,5.0,318.0,,24.77,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+10,Toyota,Glanza,1.2 L[S],hatchback,cng,manual,11.67,51.3,5.0,318.0,,33.61,,six_airbags|android_auto
+11,Toyota,Glanza,1.2 L[G],hatchback,cng,manual,12.81,51.3,5.0,318.0,,33.61,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+12,Toyota,Glanza,1.2 L[S],hatchback,cng,automatic,12.35,51.3,5.0,318.0,,34.47,,six_airbags|android_auto
+13,Toyota,Glanza,1.2 L[G],hatchback,cng,automatic,13.93,51.3,5.0,318.0,,34.47,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+14,Toyota,Urban Cruiser Taisor (White Board),1.2L [E],compact_suv,petrol,manual,9.84,66.0,5.0,308.0,,21.7,,six_airbags|auto_climate|wireless_charging
+15,Toyota,Urban Cruiser Taisor (White Board),1.2L [S],compact_suv,petrol,manual,10.94,66.0,5.0,308.0,,21.7,,six_airbags|android_auto|auto_climate
+16,Toyota,Urban Cruiser Taisor (White Board),1.2L [S+],compact_suv,petrol,manual,11.36,66.0,5.0,308.0,,21.7,,six_airbags|android_auto|auto_climate
+17,Toyota,Urban Cruiser Taisor (White Board),1.0L [G Turbo],compact_suv,petrol,manual,13.93,73.6,5.0,308.0,,21.5,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+18,Toyota,Urban Cruiser Taisor (White Board),1.0L [V Turbo],compact_suv,petrol,manual,15.07,73.6,5.0,308.0,,21.5,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|connected_car
+19,Toyota,Urban Cruiser Taisor (White Board),1.2 L [S AMT],compact_suv,petrol,automatic,11.68,66.0,5.0,308.0,,22.8,,six_airbags|android_auto|auto_climate
+20,Toyota,Urban Cruiser Taisor (White Board),1.2 L [S +AMT],compact_suv,petrol,automatic,12.1,66.0,5.0,308.0,,22.8,,six_airbags|android_auto|auto_climate
+21,Toyota,Urban Cruiser Taisor (White Board),1.0L [G Turbo],compact_suv,petrol,automatic,15.72,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+22,Toyota,Urban Cruiser Taisor (White Board),1.0 L[V Turbo],compact_suv,petrol,automatic,16.88,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+23,Toyota,Urban Cruiser Taisor (White Board),1.0 L[V Turbo MT DT],compact_suv,petrol,manual,15.27,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+24,Toyota,Urban Cruiser Taisor (White Board),1.0 L[V Turbo AT DT],compact_suv,petrol,automatic,17.08,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+25,Toyota,Urban Cruiser Taisor (White Board),1.2 L[E CNG],compact_suv,petrol,manual,11.02,57.0,5.0,308.0,,28.5,,six_airbags|auto_climate
+26,Toyota,Urban Cruiser Taisor (Yellow Board),1.2L [E],compact_suv,petrol,manual,8.89,66.0,5.0,308.0,,21.7,,six_airbags|auto_climate
+27,Toyota,Urban Cruiser Taisor (Yellow Board),1.2L [S],compact_suv,petrol,manual,9.87,66.0,5.0,308.0,,21.7,,six_airbags|android_auto|auto_climate
+28,Toyota,Urban Cruiser Taisor (Yellow Board),1.2L [S+],compact_suv,petrol,manual,10.26,66.0,5.0,308.0,,21.7,,six_airbags|android_auto|auto_climate
+29,Toyota,Urban Cruiser Taisor (Yellow Board),1.0L [G Turbo],compact_suv,petrol,manual,12.79,73.6,5.0,308.0,,21.5,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+30,Toyota,Urban Cruiser Taisor (Yellow Board),1.0 L [V Turbo],compact_suv,petrol,manual,13.83,73.6,5.0,308.0,,21.5,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+31,Toyota,Urban Cruiser Taisor (Yellow Board),1.2 L[S AMT],compact_suv,petrol,automatic,10.54,66.0,5.0,308.0,,22.8,,six_airbags|android_auto|auto_climate
+32,Toyota,Urban Cruiser Taisor (Yellow Board),1.2 L[S +AMT],compact_suv,petrol,automatic,10.92,66.0,5.0,308.0,,22.8,,six_airbags|android_auto|auto_climate
+33,Toyota,Urban Cruiser Taisor (Yellow Board),1.0 L[G Turbo],compact_suv,petrol,automatic,14.43,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|wireless_charging|connected_car
+34,Toyota,Urban Cruiser Taisor (Yellow Board),1.0 L[V Turbo],compact_suv,petrol,automatic,15.48,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+35,Toyota,Urban Cruiser Taisor (Yellow Board),1.0 L[V Turbo MT DT],compact_suv,petrol,manual,14.01,73.6,5.0,308.0,,21.5,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+36,Toyota,Urban Cruiser Taisor (Yellow Board),1.0 L[V Turbo AT DT],compact_suv,petrol,automatic,15.66,73.6,5.0,308.0,,20.0,,six_airbags|android_auto|auto_climate|camera_360|cruise_control|wireless_charging|connected_car
+37,Toyota,Urban Cruiser Taisor (Yellow Board),1.2 L[E CNG],compact_suv,petrol,manual,10.03,57.0,5.0,308.0,,28.5,,six_airbags|android_auto|auto_climate
+38,Toyota,Rumion-Neo Drive,1.5 L[E],mpv,petrol,manual,12.74,103.0,7.0,209.0,0.0,20.51,,six_airbags
+39,Toyota,Rumion-Neo Drive,1.5 L[S],mpv,petrol,manual,14.39,103.0,7.0,209.0,,20.51,,six_airbags
+40,Toyota,Rumion-Neo Drive,1.5 L[G],mpv,petrol,manual,15.85,103.0,7.0,209.0,,20.51,,six_airbags|android_auto|auto_climate|connected_car
+41,Toyota,Rumion-Neo Drive,1.5 L[V],mpv,petrol,manual,16.81,103.0,7.0,209.0,,20.51,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+42,Toyota,Rumion-Neo Drive,1.5 L[S],mpv,petrol,automatic,16.37,103.0,7.0,209.0,,20.11,,six_airbags|android_auto
+43,Toyota,Rumion-Neo Drive,1.5 L[G],mpv,petrol,automatic,17.77,103.0,7.0,209.0,,20.11,,six_airbags|android_auto|auto_climate|connected_car
+44,Toyota,Rumion-Neo Drive,1.5 L[V],mpv,petrol,automatic,18.71,103.0,7.0,209.0,,20.11,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+45,Toyota,Rumion-Neo Drive,1.5 L[S],mpv,cng,manual,15.55,103.0,7.0,209.0,,26.11,,six_airbags|android_auto
+46,Toyota,Urban Cruiser Hyryder,V Hybrid 2WD,midsize_suv,hybrid,automatic,19.99,115.0,5.0,265.0,0.0,27.97,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+47,Toyota,Hyryder Neo Drive,1.5 L[E MT],midsize_suv,petrol,manual,14.22,103.0,5.0,373.0,0.0,21.12,,six_airbags|auto_climate|ventilated_seats
+48,Toyota,Hyryder Neo Drive,1.5 L[S MT],midsize_suv,petrol,manual,15.96,103.0,5.0,373.0,,21.12,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+49,Toyota,Hyryder Neo Drive,1.5 L[G MT],midsize_suv,petrol,manual,18.32,103.0,5.0,373.0,,21.12,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+50,Toyota,Hyryder Neo Drive,1.5 L[V MT],midsize_suv,petrol,manual,21.11,103.0,5.0,373.0,,21.12,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+51,Toyota,Hyryder Neo Drive,1.5 L[S MT],midsize_suv,petrol,automatic,17.51,103.0,5.0,373.0,,20.58,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+52,Toyota,Hyryder Neo Drive,1.5 L[G MT],midsize_suv,petrol,automatic,20.86,103.0,5.0,373.0,,20.58,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+53,Toyota,Hyryder Neo Drive,1.5 L[V MT],midsize_suv,petrol,automatic,28.2,103.0,5.0,373.0,,20.58,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+54,Toyota,Hyrider Hybrid,1.5 L[S MT],midsize_suv,petrol,automatic,22.16,115.0,5.0,265.0,,27.97,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+55,Toyota,Hyrider Hybrid,1.5 L[G MT],midsize_suv,petrol,automatic,24.67,115.0,5.0,265.0,,27.97,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+56,Toyota,Hyrider Hybrid,1.5 L[V MT],midsize_suv,petrol,automatic,25.58,115.0,5.0,265.0,,27.97,,sunroof|six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+57,Toyota,Hyrider CNG,1.5 L[S MT],midsize_suv,cng,manual,17.01,,5.0,,,26.1,,six_airbags|android_auto|auto_climate|cruise_control|connected_car
+58,Toyota,Hyrider CNG,1.5 L[G MT],midsize_suv,cng,manual,20.33,,5.0,,,26.1,,six_airbags|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+59,Toyota,Urban Cruiser Ebella,High Grade,midsize_suv,electric,automatic,28.05,128.0,5.0,306.0,,,543.0,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+60,Toyota,Urban Cruiser Ebella,High DT,midsize_suv,electric,automatic,28.28,128.0,5.0,306.0,,,543.0,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+61,Toyota,Innova Crysta,ZX 7-seater,mpv,diesel,manual,26.63,110.0,7.0,318.0,,14.0,,six_airbags|android_auto|auto_climate|cruise_control|wireless_charging
+62,Toyota,Innova Hycross,ZX(O) Hybrid,mpv,hybrid,automatic,31.84,186.0,7.0,300.0,5.0,23.24,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+63,Toyota,Hilux,"[4*2 GX ,AT]",large_suv,diesel,automatic,42.82,201.0,5.0,470.0,,10.0,,six_airbags|android_auto
+64,Toyota,Hilux,"[4*4 GX ,AT]",large_suv,diesel,automatic,45.0,201.0,5.0,470.0,,10.0,,six_airbags|android_auto
+65,Toyota,Hilux,"[4*4 VX ,AT]",large_suv,diesel,automatic,48.84,201.0,5.0,470.0,,10.0,,six_airbags|android_auto|camera_360|cruise_control|wireless_charging|connected_car
+66,Toyota,Hilux White,"[4*2 GX ,AT]",large_suv,diesel,automatic,43.08,201.0,5.0,470.0,,10.0,,six_airbags|android_auto
+67,Toyota,Hilux White,"[4*4 GX ,AT]",large_suv,diesel,automatic,45.26,201.0,5.0,470.0,,10.0,,six_airbags|android_auto
+68,Toyota,Hilux White,"[4*4 VX ,AT]",large_suv,diesel,automatic,49.1,201.0,5.0,470.0,,10.0,,six_airbags|android_auto|camera_360|cruise_control|wireless_charging|connected_car
+69,Toyota,Fortuner,GR-S 4x4 Diesel AT,large_suv,diesel,automatic,50.46,201.0,7.0,296.0,,,,six_airbags|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+70,Toyota,Fortuner Legender,2.8L[4*2 AT],large_suv,diesel,automatic,57.82,201.0,7.0,296.0,,14.4,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+71,Toyota,Fortuner Legender,2.8L[4*4 AT],large_suv,diesel,automatic,64.76,201.0,7.0,296.0,,14.4,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+72,Toyota,Fortuner Legender,2.8L[4*4 AT],large_suv,diesel,manual,60.61,201.0,7.0,296.0,,14.4,,six_airbags|adas|android_auto|auto_climate|ventilated_seats|cruise_control|wireless_charging|connected_car
+73,Toyota,Camry(Other Color),Elegant 2.5 Hybrid,sedan,hybrid,automatic,63.48,230.0,5.0,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+74,Toyota,Camry(Other Color),Sprint ,sedan,hybrid,automatic,64.76,230.0,5.0,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+75,Toyota,Camry White,Elegant 2.5 Hybrid,sedan,hybrid,automatic,63.73,230.0,5.0,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+76,Toyota,Camry White,Sprint ,sedan,hybrid,automatic,65.01,230.0,5.0,587.0,,25.49,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats
+77,Toyota,Vellfire,VIP Executive Lounge Hybrid,mpv,hybrid,automatic,168.01,190.0,7.0,,,19.28,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+78,Toyota,Vellfire,HI Grade,mpv,hybrid,automatic,155.44,,,,,19.28,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+79,Toyota,Land Cruiser,ZX,large_suv,diesel,automatic,279.57,304.0,5.0,621.0,,11.0,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
+80,Toyota,Land Cruiser ,GRS,large_suv,diesel,automatic,288.57,304.0,5.0,621.0,,11.0,,sunroof|six_airbags|adas|android_auto|auto_climate|ventilated_seats|camera_360|cruise_control|wireless_charging|connected_car
