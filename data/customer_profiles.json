@@ -5,12 +5,26 @@
     "sub": "Family looking for 7-seat hybrid/EV SUV",
     "budgetMin": 20,
     "budgetMax": 28,
-    "fuels": ["hybrid", "electric"],
-    "bodies": ["midsize_suv", "large_suv", "mpv"],
+    "fuels": [
+      "hybrid",
+      "electric"
+    ],
+    "bodies": [
+      "midsize_suv",
+      "large_suv",
+      "mpv"
+    ],
     "trans": "automatic",
     "seats": "7",
-    "features": ["six_airbags", "adas", "camera_360"],
-    "priorities": ["safety", "space"]
+    "features": [
+      "six_airbags",
+      "adas",
+      "camera_360"
+    ],
+    "priorities": [
+      "safety",
+      "space"
+    ]
   },
   {
     "id": "mehta",
@@ -18,12 +32,26 @@
     "sub": "Premium electric sedan, safety & performance",
     "budgetMin": 30,
     "budgetMax": 55,
-    "fuels": ["electric", "hybrid"],
-    "bodies": ["sedan", "compact_suv"],
+    "fuels": [
+      "electric",
+      "hybrid"
+    ],
+    "bodies": [
+      "sedan",
+      "compact_suv"
+    ],
     "trans": "automatic",
     "seats": "",
-    "features": ["sunroof", "adas", "ventilated_seats", "wireless_charging"],
-    "priorities": ["safety", "performance"]
+    "features": [
+      "sunroof",
+      "adas",
+      "ventilated_seats",
+      "wireless_charging"
+    ],
+    "priorities": [
+      "safety",
+      "performance"
+    ]
   },
   {
     "id": "ananya",
@@ -31,11 +59,82 @@
     "sub": "First car — city commute, fuel efficiency",
     "budgetMin": 8,
     "budgetMax": 14,
-    "fuels": ["petrol", "electric"],
-    "bodies": ["hatchback", "compact_suv"],
+    "fuels": [
+      "petrol",
+      "electric"
+    ],
+    "bodies": [
+      "hatchback",
+      "compact_suv"
+    ],
     "trans": "any",
     "seats": "",
-    "features": ["android_auto", "auto_climate"],
-    "priorities": ["efficiency"]
+    "features": [
+      "android_auto",
+      "auto_climate"
+    ],
+    "priorities": [
+      "efficiency"
+    ]
+  },
+  {
+    "id": "suresh_family",
+    "name": "Suresh & Family",
+    "sub": "Large diesel SUV, 7 seats",
+    "budgetMin": 40.0,
+    "budgetMax": 65.0,
+    "fuels": [
+      "diesel"
+    ],
+    "bodies": [
+      "large_suv"
+    ],
+    "trans": "automatic",
+    "seats": "7",
+    "features": [],
+    "priorities": []
+  },
+  {
+    "id": "krishna",
+    "name": "krishna",
+    "sub": "",
+    "budgetMin": 10.0,
+    "budgetMax": 15.0,
+    "fuels": [
+      "petrol"
+    ],
+    "bodies": [
+      "hatchback"
+    ],
+    "trans": "any",
+    "seats": "5",
+    "features": [
+      "six_airbags"
+    ],
+    "priorities": [
+      "safety",
+      "performance",
+      "space"
+    ]
+  },
+  {
+    "id": "dass",
+    "name": "dass",
+    "sub": "",
+    "budgetMin": 10.0,
+    "budgetMax": 15.0,
+    "fuels": [
+      "petrol"
+    ],
+    "bodies": [
+      "hatchback"
+    ],
+    "trans": "any",
+    "seats": "5",
+    "features": [],
+    "priorities": [
+      "safety",
+      "performance"
+    ]
   }
 ]

@@ -888,6 +888,176 @@ async function loadAnalytics() {
   } catch (err) { showToast("Could not load analytics: " + err.message, "error"); }
 }
 
+/* ── Add Customer Profile Modal ───────────────────────────────────────── */
+let npFuels  = [];
+let npBodies = [];
+let npTrans  = "any";
+let npModalBuilt = false;
+
+function buildNpModal(options) {
+  if (npModalBuilt) return;
+
+  const fuels = ["petrol","diesel","hybrid","electric","cng"];
+  const fuelEl = $("#np-fuel-buttons");
+  fuels.forEach(f => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.npFuel = f;
+    b.textContent = `${FUEL_EMOJI[f] || ""} ${pretty(f)}`;
+    b.className = "np-fuel-btn px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition";
+    b.onclick = () => {
+      if (npFuels.includes(f)) { npFuels = npFuels.filter(x => x !== f); b.classList.remove("active"); }
+      else { npFuels.push(f); b.classList.add("active"); }
+    };
+    fuelEl.appendChild(b);
+  });
+
+  const bodyEl = $("#np-body-buttons");
+  options.body_types.forEach(bt => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.npBody = bt;
+    b.textContent = pretty(bt);
+    b.className = "np-body-btn px-2.5 py-1 rounded-xl border border-slate-200 bg-slate-50 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition";
+    b.onclick = () => {
+      if (npBodies.includes(bt)) { npBodies = npBodies.filter(x => x !== bt); b.classList.remove("active"); }
+      else { npBodies.push(bt); b.classList.add("active"); }
+    };
+    bodyEl.appendChild(b);
+  });
+
+  const featEl = $("#np-feature-checks");
+  options.features.forEach(f => {
+    const label = document.createElement("label");
+    label.className = "feat-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+    label.innerHTML = `<input type="checkbox" data-np-feat="${f.key}" class="rounded text-brand-600 focus:ring-0">
+                       <span class="font-semibold text-slate-700">${f.label}</span>`;
+    featEl.appendChild(label);
+  });
+
+  const prioEl = $("#np-priority-checks");
+  const icons = { safety:"🛡", performance:"⚡", space:"📦", efficiency:"🍃" };
+  options.priorities.forEach(p => {
+    const label = document.createElement("label");
+    label.className = "feat-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer";
+    label.innerHTML = `<input type="checkbox" data-np-prio="${p}" class="rounded text-brand-600 focus:ring-0">
+                       <span class="font-semibold text-slate-700">${icons[p] || ""} ${pretty(p)}</span>`;
+    prioEl.appendChild(label);
+  });
+
+  npModalBuilt = true;
+}
+
+function openAddProfileModal() {
+  npFuels = []; npBodies = []; npTrans = "any";
+  $("#add-profile-form").reset();
+  document.querySelectorAll(".np-fuel-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".np-body-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".np-trans-btn").forEach(b => b.classList.toggle("active", b.dataset.npTrans === "any"));
+  document.querySelectorAll("[data-np-feat],[data-np-prio]").forEach(cb => cb.checked = false);
+  $("#profile-modal").classList.remove("hidden");
+}
+
+function closeAddProfileModal() {
+  $("#profile-modal").classList.add("hidden");
+}
+
+function setNpTrans(t, btn) {
+  npTrans = t;
+  document.querySelectorAll(".np-trans-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+}
+
+async function saveNewProfile(e) {
+  e.preventDefault();
+  const feats = [...document.querySelectorAll("[data-np-feat]:checked")].map(x => x.dataset.npFeat);
+  const prios = [...document.querySelectorAll("[data-np-prio]:checked")].map(x => x.dataset.npPrio);
+  const profile = {
+    name:      $("#np-name").value.trim(),
+    sub:       $("#np-sub").value.trim(),
+    budgetMin: parseFloat($("#np-budget-min").value || 0),
+    budgetMax: parseFloat($("#np-budget-max").value || 25),
+    fuels:     [...npFuels],
+    bodies:    [...npBodies],
+    trans:     npTrans,
+    seats:     $("#np-seats").value,
+    features:  feats,
+    priorities: prios,
+  };
+  const btn = $("#np-submit-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Saving…';
+  try {
+    const saved = await api("/api/profiles", profile);
+    closeAddProfileModal();
+    showToast(`Profile "${saved.name}" saved!`, "success");
+    loadSavedProfiles();
+  } catch (err) {
+    showToast("Could not save profile: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Save Profile';
+  }
+}
+
+async function loadSavedProfiles() {
+  try {
+    const profiles = await api("/api/profiles");
+    const container = $("#saved-profiles-container");
+    if (!container) return;
+    container.innerHTML = "";
+    profiles.forEach(p => {
+      const wrap = document.createElement("div");
+      wrap.className = "relative group flex items-center";
+      const btn = document.createElement("button");
+      btn.className = "px-3 py-1.5 pr-7 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 font-bold text-xs hover:bg-emerald-100 transition";
+      btn.textContent = p.name;
+      btn.title = p.sub || "";
+      btn.onclick = () => loadProfileFromObj(p);
+      const del = document.createElement("button");
+      del.className = "absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-500 transition text-[11px] font-black leading-none";
+      del.textContent = "×";
+      del.title = "Remove profile";
+      del.onclick = (e) => { e.stopPropagation(); deleteProfile(p.id); };
+      wrap.appendChild(btn);
+      wrap.appendChild(del);
+      container.appendChild(wrap);
+    });
+  } catch (_) {}
+}
+
+async function deleteProfile(id) {
+  try {
+    await api(`/api/profiles/${id}`, null, "DELETE");
+    showToast("Profile removed", "info");
+    loadSavedProfiles();
+  } catch (err) {
+    showToast("Delete failed: " + err.message, "error");
+  }
+}
+
+function loadProfileFromObj(p) {
+  $("#active-lead-name").textContent = p.name;
+  $("#active-lead-sub").textContent  = p.sub || "Saved profile";
+  $("#input-budget-min").value = p.budgetMin;
+  $("#input-budget-max").value = p.budgetMax;
+  updateBudgetDisplay();
+  selectedFuels = [...(p.fuels || [])];
+  document.querySelectorAll(".fuel-btn").forEach(b => {
+    b.classList.toggle("active", selectedFuels.includes(b.dataset.fuel));
+    if (b.dataset.fuel === "all") b.classList.toggle("active", !selectedFuels.length);
+  });
+  selectedBodies = [...(p.bodies || [])];
+  document.querySelectorAll(".body-btn").forEach(b => b.classList.toggle("active", selectedBodies.includes(b.dataset.body)));
+  const transBtn = document.querySelector(`.trans-btn[data-trans="${p.trans || "any"}"]`);
+  if (transBtn) setTrans(p.trans || "any", transBtn);
+  $("#input-seats").value = p.seats || "";
+  document.querySelectorAll("[data-feat]").forEach(cb => { cb.checked = (p.features || []).includes(cb.dataset.feat); });
+  document.querySelectorAll("[data-prio]").forEach(cb => { cb.checked = (p.priorities || []).includes(cb.dataset.prio); });
+  showToast(`Loaded: ${p.name}`, "info");
+  runAIMatch();
+}
+
 /* ── Init ─────────────────────────────────────────────────────────────── */
 async function init() {
   try {
@@ -896,8 +1066,10 @@ async function init() {
     buildBodyChips(o.body_types);
     buildFeatureChecks(o.features);
     buildPriorityChecks(o.priorities);
+    buildNpModal(o);
     updateBudgetDisplay();
     loadFleetStats();
+    loadSavedProfiles();
     runAIMatch();
   } catch (err) {
     showToast("Failed to load options from API", "error");

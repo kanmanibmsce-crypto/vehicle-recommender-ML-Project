@@ -36,6 +36,9 @@
         .fuel-btn.active  { border-width:2px; border-color:#eb0a1e; background:#fef2f2; color:#eb0a1e; font-weight:700; }
         .body-btn.active  { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
         .trans-btn.active { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
+        .np-fuel-btn.active { border-width:2px; border-color:#eb0a1e; background:#fef2f2; color:#eb0a1e; font-weight:700; }
+        .np-body-btn.active { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
+        .np-trans-btn.active { background:#eb0a1e; color:#fff; border-color:#eb0a1e; }
         .feat-row label   { cursor:pointer; }
         .toyota-logo-oval { filter: drop-shadow(0 1px 2px rgba(0,0,0,.25)); }
     </style>
@@ -179,6 +182,12 @@
                         </button>
                         <button onclick="loadLead('ananya')" class="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 font-bold text-xs hover:bg-slate-100 transition">
                             Ananya (City First Car)
+                        </button>
+                        <div class="h-5 w-px bg-slate-200 mx-1"></div>
+                        <!-- Saved profiles injected here -->
+                        <div id="saved-profiles-container" class="flex flex-wrap gap-2"></div>
+                        <button onclick="openAddProfileModal()" class="px-3 py-1.5 rounded-xl border border-dashed border-brand-300 bg-brand-50 text-brand-700 font-bold text-xs hover:bg-brand-100 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus text-[10px]"></i> Add Profile
                         </button>
                     </div>
                 </div>
@@ -532,6 +541,110 @@
   animate-spin hover:shadow-dropdown border-emerald-500 ring-emerald-500/20 shadow-md
   bg-emerald-600 bg-emerald-500 bg-blue-500 text-blue-200"></div>
 
-<script src="/static/app.js?v=11"></script>
+<!-- ADD CUSTOMER PROFILE MODAL -->
+<div id="profile-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-2xl border border-slate-200 max-h-[92vh] overflow-y-auto space-y-4">
+        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+                    <i class="fa-solid fa-user-plus text-sm"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Add Customer Profile</h3>
+                    <p class="text-[11px] text-slate-400">Save a reusable preference profile for a customer</p>
+                </div>
+            </div>
+            <button onclick="closeAddProfileModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <form id="add-profile-form" onsubmit="saveNewProfile(event)" class="space-y-4 text-xs">
+            <!-- Name & Description -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Customer Name *</label>
+                    <input id="np-name" type="text" required maxlength="100" placeholder="e.g. Ramesh Patel"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Profile Description</label>
+                    <input id="np-sub" type="text" maxlength="200" placeholder="e.g. Family SUV, budget buyer"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+
+            <!-- Budget -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Min Budget (₹L)</label>
+                    <input id="np-budget-min" type="number" min="0" step="0.5" value="10"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Max Budget (₹L)</label>
+                    <input id="np-budget-max" type="number" min="1" step="0.5" value="25"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                </div>
+            </div>
+
+            <!-- Fuel -->
+            <div>
+                <label class="font-bold text-slate-700 block mb-1.5">Fuel / Powertrain <span class="text-slate-400 font-normal">(select any)</span></label>
+                <div class="flex flex-wrap gap-2" id="np-fuel-buttons"></div>
+            </div>
+
+            <!-- Body Type -->
+            <div>
+                <label class="font-bold text-slate-700 block mb-1.5">Body Type <span class="text-slate-400 font-normal">(select any)</span></label>
+                <div class="flex flex-wrap gap-1.5" id="np-body-buttons"></div>
+            </div>
+
+            <!-- Transmission & Seats -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1.5">Transmission</label>
+                    <div class="flex gap-2">
+                        <button type="button" data-np-trans="any" onclick="setNpTrans('any',this)" class="np-trans-btn active flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Any</button>
+                        <button type="button" data-np-trans="automatic" onclick="setNpTrans('automatic',this)" class="np-trans-btn flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Auto</button>
+                        <button type="button" data-np-trans="manual" onclick="setNpTrans('manual',this)" class="np-trans-btn flex-1 p-2 rounded-xl border border-slate-200 bg-slate-50 font-semibold text-slate-600 hover:bg-slate-100 text-center">Manual</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="font-bold text-slate-700 block mb-1">Min Seats</label>
+                    <select id="np-seats" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-semibold text-slate-800 focus:outline-none focus:border-brand-500">
+                        <option value="">Any</option>
+                        <option value="5">5+ seats</option>
+                        <option value="7">7 seats</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <div>
+                <label class="font-bold text-slate-700 block mb-1.5">Must-Have Features</label>
+                <div class="grid grid-cols-3 gap-1.5" id="np-feature-checks"></div>
+            </div>
+
+            <!-- Priorities -->
+            <div>
+                <label class="font-bold text-slate-700 block mb-1.5">Priorities</label>
+                <div class="grid grid-cols-4 gap-1.5" id="np-priority-checks"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="pt-2 flex gap-2 border-t border-slate-100">
+                <button type="submit" id="np-submit-btn" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Save Profile
+                </button>
+                <button type="button" onclick="closeAddProfileModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-50">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/app.js?v=12"></script>
 </body>
 </html>

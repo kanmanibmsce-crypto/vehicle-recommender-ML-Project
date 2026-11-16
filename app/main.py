@@ -5,6 +5,10 @@ Docs: http://127.0.0.1:8000/docs
 """
 from __future__ import annotations
 
+import json
+import re
+import uuid
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -13,9 +17,31 @@ from . import config as C
 from .events import EventStore
 from .query_parser import parse_query
 from .recommender import Recommender, _clean
-from .schemas import (EventIn, RecommendRequest, RecommendResponse,
-                      SearchRequest, SearchResponse,
-                      TestDriveBookingIn, TestDriveBookingOut, TestDriveUpdateIn)
+from .schemas import (CustomerProfile, CustomerProfileIn, EventIn,
+                      Preferences, RecommendRequest, RecommendResponse,
+                      SearchRequest, SearchResponse, TestDriveBookingIn,
+                      TestDriveBookingOut, TestDriveUpdateIn)
+
+_PROFILES_PATH = C.BASE_DIR / "data" / "customer_profiles.json"
+
+
+def _load_profiles() -> list[dict]:
+    if _PROFILES_PATH.exists():
+        return json.loads(_PROFILES_PATH.read_text(encoding="utf-8"))
+    return []
+
+
+def _save_profiles(profiles: list[dict]) -> None:
+    _PROFILES_PATH.write_text(
+        json.dumps(profiles, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _make_id(name: str, existing: set[str]) -> str:
+    base = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")[:20] or "profile"
+    if base not in existing:
+        return base
+    return f"{base}_{uuid.uuid4().hex[:4]}"
 
 
 def create_app(db_path=C.DB_PATH) -> FastAPI:
@@ -99,6 +125,28 @@ def create_app(db_path=C.DB_PATH) -> FastAPI:
     @app.get("/api/metrics")
     def metrics():
         return store.metrics()
+
+    @app.get("/api/profiles")
+    def list_profiles():
+        return _load_profiles()
+
+    @app.post("/api/profiles", status_code=201)
+    def create_profile(p: CustomerProfileIn):
+        profiles = _load_profiles()
+        existing_ids = {pr["id"] for pr in profiles}
+        new_id = _make_id(p.name, existing_ids)
+        profile = {"id": new_id, **p.model_dump()}
+        profiles.append(profile)
+        _save_profiles(profiles)
+        return profile
+
+    @app.delete("/api/profiles/{profile_id}", status_code=204)
+    def delete_profile(profile_id: str):
+        profiles = _load_profiles()
+        updated = [p for p in profiles if p["id"] != profile_id]
+        if len(updated) == len(profiles):
+            raise HTTPException(404, "Profile not found")
+        _save_profiles(updated)
 
     static_dir = C.BASE_DIR / "static"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
