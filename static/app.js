@@ -284,6 +284,7 @@ function setTrans(t, btn) {
 /* ── Feature checkboxes ───────────────────────────────────────────────── */
 function buildFeatureChecks(features) {
   const el = $("#feature-checks");
+  el.innerHTML = "";
   features.forEach(f => {
     const label = document.createElement("label");
     label.className = "feat-row flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer";
@@ -296,6 +297,7 @@ function buildFeatureChecks(features) {
 /* ── Priority checkboxes ──────────────────────────────────────────────── */
 function buildPriorityChecks(priorities) {
   const el = $("#priority-checks");
+  el.innerHTML = "";
   const icons = { safety:"🛡", performance:"⚡", space:"📦", efficiency:"🍃" };
   priorities.forEach(p => {
     const label = document.createElement("label");
@@ -391,10 +393,19 @@ function renderVehicleCards(out) {
     return;
   }
 
-  const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
-  $("#results-meta").textContent = `${out.results.length} matches from ${out.candidates_after_filters} vehicles${personal}`;
+  // Keep only the best-scoring variant per model (catalog has up to 13 variants of same model).
+  const seenModels = new Set();
+  const dedupedResults = out.results.filter(r => {
+    const key = r.vehicle.model.toLowerCase().trim();
+    if (seenModels.has(key)) return false;
+    seenModels.add(key);
+    return true;
+  });
 
-  out.results.forEach((r, idx) => {
+  const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
+  $("#results-meta").textContent = `${dedupedResults.length} matches from ${out.candidates_after_filters} vehicles${personal}`;
+
+  dedupedResults.forEach((r, idx) => {
     const v = r.vehicle;
     const isTop = idx === 0;
     const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase().trim()] : null;
