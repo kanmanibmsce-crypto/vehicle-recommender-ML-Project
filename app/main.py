@@ -179,7 +179,11 @@ def create_app(db_path=C.DB_PATH) -> FastAPI:
 
     @app.get("/", include_in_schema=False)
     def index():
-        return FileResponse(static_dir / "index.html")
+        resp = FileResponse(static_dir / "index.html")
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+        return resp
 
     return app
 
