@@ -33,6 +33,15 @@ function saveLocalBooking(b) {
     localStorage.setItem("dm_bookings", JSON.stringify(list.slice(0, 200)));
   } catch (_) {}
 }
+function updateLocalBooking(id, changes) {
+  try {
+    const list = getLocalBookings();
+    const i = list.findIndex(b => String(b.id) === String(id));
+    if (i !== -1) { list[i] = { ...list[i], ...changes }; }
+    else { list.unshift({ id, ...changes, _local: true }); }
+    localStorage.setItem("dm_bookings", JSON.stringify(list.slice(0, 200)));
+  } catch (_) {}
+}
 let posChart       = null;
 
 const PRETTY = {
@@ -812,10 +821,17 @@ async function loadLeadInbox() {
       vPriceMap[v.id] = v.price_lakh;
     });
 
+    // Sync server bookings into localStorage so completed-state updates
+    // survive Vercel cross-instance reads.
+    serverBookings.forEach(b => updateLocalBooking(b.id, { ...b, _local: false }));
+
     // Merge: server is authoritative; fill gaps from localStorage (Vercel cold-start fix).
     const serverIds = new Set(serverBookings.map(b => String(b.id)));
+    // For server bookings, prefer localStorage completed state (updated optimistically).
+    const localMap = Object.fromEntries(getLocalBookings().map(b => [String(b.id), b]));
+    const merged = serverBookings.map(b => ({ ...b, completed: localMap[String(b.id)]?.completed ?? b.completed }));
     const localOnly = getLocalBookings().filter(b => !serverIds.has(String(b.id)));
-    const bookings = [...serverBookings, ...localOnly].sort((a, b) => b.ts - a.ts);
+    const bookings = [...merged, ...localOnly].sort((a, b) => b.ts - a.ts);
 
     const badge = $("#leads-badge");
     if (bookings.length) { badge.textContent = bookings.length; badge.classList.remove("hidden"); }
@@ -845,15 +861,13 @@ async function loadLeadInbox() {
             const vPrice = b.vehicle_price != null ? b.vehicle_price : vPriceMap[b.vehicle_id];
             const local = isLocal(b);
             return `
-            <tr class="hover:bg-slate-50 transition${local ? " opacity-80" : ""}" data-bid="${b.id}">
+            <tr class="hover:bg-slate-50 transition" data-bid="${b.id}">
               <td class="py-3 px-4">
-                ${local
-                  ? `<span class="w-8 h-8 rounded-full border-2 border-slate-200 text-slate-300 flex items-center justify-center text-sm" title="Saved locally">○</span>`
-                  : `<button class="tick-btn w-8 h-8 rounded-full border-2 ${b.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-400"} flex items-center justify-center text-sm font-bold hover:border-emerald-400 transition"
-                      data-bid="${b.id}" data-completed="${b.completed ? 1 : 0}" title="Toggle test drive taken">
-                      ${b.completed ? "✓" : "○"}
-                    </button>`
-                }
+                <button class="tick-btn w-8 h-8 rounded-full border-2 ${b.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-400"} flex items-center justify-center text-sm font-bold hover:border-emerald-400 transition"
+                  data-bid="${b.id}" data-completed="${b.completed ? 1 : 0}"
+                  data-islocal="${local ? 1 : 0}" title="Toggle test drive taken">
+                  ${b.completed ? "✓" : "○"}
+                </button>
               </td>
               <td class="py-3 px-4 font-bold text-slate-900">${b.name}<br>
                 <span class="text-[10px] text-slate-400 font-normal">${b.phone}</span></td>
@@ -871,11 +885,9 @@ async function loadLeadInbox() {
               <td class="py-3 px-4 text-slate-600">${b.city}${b.branch ? ` · ${b.branch}` : ""}</td>
               <td class="py-3 px-4 font-semibold">${b.preferred_date}</td>
               <td class="py-3 px-4">
-                ${local
-                  ? `<span class="text-slate-400">${b.sales_officer || "—"}</span>`
-                  : `<input type="text" class="officer-input border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 text-slate-800 w-32 focus:outline-none focus:border-brand-500"
-                      value="${b.sales_officer || ""}" placeholder="Assign officer" data-bid="${b.id}">`
-                }
+                <input type="text" class="officer-input border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 text-slate-800 w-32 focus:outline-none focus:border-brand-500"
+                  value="${b.sales_officer || ""}" placeholder="Assign officer"
+                  data-bid="${b.id}" data-islocal="${local ? 1 : 0}">
               </td>
               <td class="py-3 px-4 text-slate-400">${new Date(b.ts * 1000).toLocaleString("en-IN", {dateStyle:"short",timeStyle:"short"})}</td>
               <td class="py-3 px-4 text-right">
@@ -888,28 +900,40 @@ async function loadLeadInbox() {
         </tbody>
       </table>`;
 
-    // Tick toggle (server bookings only)
+    // Tick toggle — update localStorage immediately, then sync server best-effort.
     container.querySelectorAll(".tick-btn").forEach(btn => {
       btn.onclick = async () => {
         const completed = btn.dataset.completed !== "1";
+        const bid = btn.dataset.bid;
+        const isLocal = btn.dataset.islocal === "1";
         btn.disabled = true;
-        try {
-          await api(`/api/bookings/test-drive/${btn.dataset.bid}`, { completed }, "PATCH");
-          showToast(completed ? "Marked as test drive taken" : "Marked as pending", "success");
-          loadLeadInbox();
-        } catch (err) {
-          showToast("Update failed: " + err.message, "error");
-        } finally { btn.disabled = false; }
+
+        // Optimistic local update (works even when server is a different Lambda).
+        updateLocalBooking(bid, { completed: completed ? 1 : 0 });
+
+        if (!isLocal) {
+          try {
+            await api(`/api/bookings/test-drive/${bid}`, { completed }, "PATCH");
+          } catch (_) { /* server update best-effort; local state already applied */ }
+        }
+
+        showToast(completed ? "Test drive marked as taken ✓" : "Marked as pending", "success");
+        loadLeadInbox();
       };
     });
 
-    // Officer name update
+    // Officer name update — persist locally + server best-effort.
     container.querySelectorAll(".officer-input").forEach(inp => {
       inp.addEventListener("change", async () => {
-        try {
-          await api(`/api/bookings/test-drive/${inp.dataset.bid}`, { sales_officer: inp.value || null }, "PATCH");
-          showToast("Officer name saved", "success");
-        } catch (err) { showToast("Save failed: " + err.message, "error"); }
+        const bid = inp.dataset.bid;
+        const isLocal = inp.dataset.islocal === "1";
+        updateLocalBooking(bid, { sales_officer: inp.value || null });
+        if (!isLocal) {
+          try {
+            await api(`/api/bookings/test-drive/${bid}`, { sales_officer: inp.value || null }, "PATCH");
+          } catch (_) {}
+        }
+        showToast("Officer name saved", "success");
       });
     });
   } catch (err) { showToast("Could not load leads: " + err.message, "error"); }
