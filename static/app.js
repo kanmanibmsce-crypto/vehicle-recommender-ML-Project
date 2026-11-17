@@ -1247,6 +1247,12 @@ function closeProfileDetail() {
   $("#profile-detail-modal").classList.add("hidden");
 }
 
+// Show detail modal for a hardcoded quick-profile preset.
+function showLeadDetail(key) {
+  const p = LEAD_PROFILES[key];
+  if (p) showProfileDetail(p);
+}
+
 async function loadSavedProfiles() {
   try {
     const profiles = await api("/api/profiles");
