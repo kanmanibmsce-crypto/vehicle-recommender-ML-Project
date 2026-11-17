@@ -679,11 +679,19 @@ async function confirmBooking(e) {
     const result = await api("/api/bookings/test-drive", payload);
     // Cache locally so the booking is visible even if Vercel routes the
     // subsequent GET to a different serverless instance with an empty /tmp DB.
+    // Resolve image for the booked vehicle from currentResults
+    const bookedResult = currentResults.find(r => r.vehicle.id === bookingTarget.vehicleId);
+    const bv = bookedResult?.vehicle;
+    const bookingImg = bv
+      ? (bv.make === "Toyota" ? TOYOTA_IMAGES[bv.model.toLowerCase().trim()] : null)
+        || (bv.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[bv.body_type] || BODY_IMAGES.compact_suv))
+      : "";
     saveLocalBooking({
       id:               result?.id ?? ("local_" + Date.now()),
       user_id:          payload.user_id,
       vehicle_id:       payload.vehicle_id,
       vehicle_name:     bookingTarget.vehicleName,
+      vehicle_img:      bookingImg,
       name:             payload.name,
       phone:            payload.phone,
       city:             payload.city,
@@ -776,9 +784,14 @@ async function loadLeadInbox() {
       api("/api/vehicles").catch(() => []),
     ]);
 
-    // Vehicle name lookup map  id → "Make Model Variant"
+    // Vehicle lookup maps  id → name / image URL
     const vMap = {};
-    vehicles.forEach(v => { vMap[v.id] = `${v.make} ${v.model} ${v.variant || ""}`.trim(); });
+    const vImgMap = {};
+    vehicles.forEach(v => {
+      vMap[v.id] = `${v.make} ${v.model} ${v.variant || ""}`.trim();
+      const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase().trim()] : null;
+      vImgMap[v.id] = toyotaImg || (v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv));
+    });
 
     // Merge: server is authoritative; fill gaps from localStorage (Vercel cold-start fix).
     const serverIds = new Set(serverBookings.map(b => String(b.id)));
@@ -809,6 +822,7 @@ async function loadLeadInbox() {
         <tbody class="divide-y divide-slate-100">
           ${bookings.map(b => {
             const vName = b.vehicle_name || vMap[b.vehicle_id] || `Vehicle #${b.vehicle_id}`;
+            const vImg  = b.vehicle_img  || vImgMap[b.vehicle_id] || "";
             const local = isLocal(b);
             return `
             <tr class="hover:bg-slate-50 transition${local ? " opacity-80" : ""}" data-bid="${b.id}">
@@ -823,7 +837,14 @@ async function loadLeadInbox() {
               </td>
               <td class="py-3 px-4 font-bold text-slate-900">${b.name}<br>
                 <span class="text-[10px] text-slate-400 font-normal">${b.phone}</span></td>
-              <td class="py-3 px-4 text-brand-600 font-semibold">${vName}</td>
+              <td class="py-3 px-4">
+                <div class="flex items-center gap-3">
+                  ${vImg ? `<img src="${vImg}" alt="${vName}"
+                      class="w-14 h-10 object-cover rounded-lg shrink-0 bg-slate-100"
+                      onerror="this.style.display='none'">` : ""}
+                  <span class="text-brand-600 font-semibold text-xs leading-tight">${vName}</span>
+                </div>
+              </td>
               <td class="py-3 px-4 text-slate-600">${b.city}${b.branch ? ` · ${b.branch}` : ""}</td>
               <td class="py-3 px-4 font-semibold">${b.preferred_date}</td>
               <td class="py-3 px-4">
