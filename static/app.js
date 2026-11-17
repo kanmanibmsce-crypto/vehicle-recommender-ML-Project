@@ -1198,6 +1198,55 @@ async function saveNewProfile(e) {
   }
 }
 
+/* ── Profile detail modal ─────────────────────────────────────────────── */
+function showProfileDetail(p) {
+  const chip = (text, color) =>
+    `<span class="px-2 py-0.5 rounded-lg text-[10px] font-bold ${color}">${text}</span>`;
+
+  $("#pd-name").textContent = p.name;
+  $("#pd-sub").textContent  = p.sub || "Customer profile";
+  $("#pd-budget").textContent = `₹${p.budgetMin ?? 0} L – ₹${p.budgetMax ?? "—"} L`;
+
+  const fuelsEl = $("#pd-fuels");
+  fuelsEl.innerHTML = (p.fuels?.length ? p.fuels : ["Any"]).map(f =>
+    chip(pretty(f), "bg-white border border-slate-200 text-slate-700")).join("");
+
+  const bodiesEl = $("#pd-bodies");
+  bodiesEl.innerHTML = (p.bodies?.length ? p.bodies : ["Any"]).map(b =>
+    chip(pretty(b), "bg-white border border-slate-200 text-slate-700")).join("");
+
+  $("#pd-trans").textContent = pretty(p.trans || "any");
+  $("#pd-seats").textContent = p.seats ? `${p.seats}+ seats` : "Any";
+
+  const featsEl = $("#pd-features");
+  const featsWrap = $("#pd-features-wrap");
+  if (p.features?.length) {
+    featsEl.innerHTML = p.features.map(f =>
+      chip(featuresMap[f] || pretty(f), "bg-blue-100 text-blue-800 border border-blue-200")).join("");
+    featsWrap.classList.remove("hidden");
+  } else {
+    featsWrap.classList.add("hidden");
+  }
+
+  const prioIcons = { safety:"🛡", performance:"⚡", space:"📦", efficiency:"🍃" };
+  const prioEl = $("#pd-priorities");
+  const prioWrap = $("#pd-priorities-wrap");
+  if (p.priorities?.length) {
+    prioEl.innerHTML = p.priorities.map(pr =>
+      chip(`${prioIcons[pr] || ""} ${pretty(pr)}`, "bg-amber-100 text-amber-800 border border-amber-200")).join("");
+    prioWrap.classList.remove("hidden");
+  } else {
+    prioWrap.classList.add("hidden");
+  }
+
+  $("#pd-load-btn").onclick = () => { closeProfileDetail(); loadProfileFromObj(p); };
+  $("#profile-detail-modal").classList.remove("hidden");
+}
+
+function closeProfileDetail() {
+  $("#profile-detail-modal").classList.add("hidden");
+}
+
 async function loadSavedProfiles() {
   try {
     const profiles = await api("/api/profiles");
@@ -1210,8 +1259,8 @@ async function loadSavedProfiles() {
       const btn = document.createElement("button");
       btn.className = "px-3 py-1.5 pr-7 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 font-bold text-xs hover:bg-emerald-100 transition";
       btn.textContent = p.name;
-      btn.title = p.sub || "";
-      btn.onclick = () => loadProfileFromObj(p);
+      btn.title = "Click to view profile";
+      btn.onclick = () => showProfileDetail(p);
       const del = document.createElement("button");
       del.className = "absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-500 transition text-[11px] font-black leading-none";
       del.textContent = "×";
