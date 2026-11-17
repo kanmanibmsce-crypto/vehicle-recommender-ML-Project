@@ -21,6 +21,18 @@ let selectedFuels  = [];     // empty = All
 let selectedBodies = [];
 let selectedTrans  = "any";
 let funnelChart    = null;
+
+/* ── Local booking cache (survives Vercel cross-instance SQLite gaps) ─── */
+function getLocalBookings() {
+  try { return JSON.parse(localStorage.getItem("dm_bookings") || "[]"); } catch (_) { return []; }
+}
+function saveLocalBooking(b) {
+  try {
+    const list = getLocalBookings();
+    list.unshift(b);
+    localStorage.setItem("dm_bookings", JSON.stringify(list.slice(0, 200)));
+  } catch (_) {}
+}
 let posChart       = null;
 
 const PRETTY = {
@@ -653,7 +665,7 @@ async function confirmBooking(e) {
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i> Booking…';
   try {
-    await api("/api/bookings/test-drive", {
+    const payload = {
       user_id:           USER_ID,
       vehicle_id:        bookingTarget.vehicleId,
       name:              $("#td-name").value,
@@ -663,11 +675,32 @@ async function confirmBooking(e) {
       preferred_date:    $("#td-date").value,
       sales_officer:     $("#td-officer").value || "",
       recommendation_id: lastRecId,
+    };
+    const result = await api("/api/bookings/test-drive", payload);
+    // Cache locally so the booking is visible even if Vercel routes the
+    // subsequent GET to a different serverless instance with an empty /tmp DB.
+    saveLocalBooking({
+      id:               result?.id ?? ("local_" + Date.now()),
+      user_id:          payload.user_id,
+      vehicle_id:       payload.vehicle_id,
+      vehicle_name:     bookingTarget.vehicleName,
+      name:             payload.name,
+      phone:            payload.phone,
+      city:             payload.city,
+      branch:           payload.branch,
+      preferred_date:   payload.preferred_date,
+      sales_officer:    payload.sales_officer,
+      ts:               Date.now() / 1000,
+      completed:        0,
+      taken_date:       null,
+      _local:           true,
     });
     const bookedName = bookingTarget.vehicleName;
     closeBookingModal();
     showToast(`Test drive booked for ${bookedName}!`, "success");
-    loadFleetStats();   // refresh sidebar stats
+    loadFleetStats();
+    switchTab("leads");
+    loadLeadInbox();
   } catch (err) {
     showToast("Booking failed: " + err.message, "error");
   } finally {
@@ -735,16 +768,34 @@ function resetFilters() {
 
 /* ── Lead Inbox ───────────────────────────────────────────────────────── */
 async function loadLeadInbox() {
+  const container = $("#leads-table-container");
   try {
-    const bookings = await api("/api/bookings/test-drive");
+    // Fetch server bookings and vehicle catalog in parallel.
+    const [serverBookings, vehicles] = await Promise.all([
+      api("/api/bookings/test-drive"),
+      api("/api/vehicles").catch(() => []),
+    ]);
+
+    // Vehicle name lookup map  id → "Make Model Variant"
+    const vMap = {};
+    vehicles.forEach(v => { vMap[v.id] = `${v.make} ${v.model} ${v.variant || ""}`.trim(); });
+
+    // Merge: server is authoritative; fill gaps from localStorage (Vercel cold-start fix).
+    const serverIds = new Set(serverBookings.map(b => String(b.id)));
+    const localOnly = getLocalBookings().filter(b => !serverIds.has(String(b.id)));
+    const bookings = [...serverBookings, ...localOnly].sort((a, b) => b.ts - a.ts);
+
     const badge = $("#leads-badge");
     if (bookings.length) { badge.textContent = bookings.length; badge.classList.remove("hidden"); }
+    else badge.classList.add("hidden");
 
-    const container = $("#leads-table-container");
     if (!bookings.length) {
       container.innerHTML = `<p class="text-center text-slate-400 py-8 text-sm">No bookings yet. Customers who book test drives will appear here.</p>`;
       return;
     }
+
+    const isLocal = b => b._local && !serverIds.has(String(b.id));
+
     container.innerHTML = `
       <table class="w-full text-left border-collapse text-xs">
         <thead>
@@ -752,38 +803,48 @@ async function loadLeadInbox() {
             <th class="py-3 px-4">Done</th><th class="py-3 px-4">Customer</th>
             <th class="py-3 px-4">Vehicle</th><th class="py-3 px-4">City / Branch</th>
             <th class="py-3 px-4">Preferred Date</th><th class="py-3 px-4">Sales Officer</th>
-            <th class="py-3 px-4">Booked At</th><th class="py-3 px-4 text-right">Action</th>
+            <th class="py-3 px-4">Booked At</th><th class="py-3 px-4 text-right">Status</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
-          ${bookings.map(b => `
-            <tr class="hover:bg-slate-50 transition" data-bid="${b.id}">
+          ${bookings.map(b => {
+            const vName = b.vehicle_name || vMap[b.vehicle_id] || `Vehicle #${b.vehicle_id}`;
+            const local = isLocal(b);
+            return `
+            <tr class="hover:bg-slate-50 transition${local ? " opacity-80" : ""}" data-bid="${b.id}">
               <td class="py-3 px-4">
-                <button class="tick-btn w-8 h-8 rounded-full border-2 ${b.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-400"} flex items-center justify-center text-sm font-bold hover:border-emerald-400 transition"
-                  data-bid="${b.id}" data-completed="${b.completed ? 1 : 0}" title="Toggle test drive taken">
-                  ${b.completed ? "✓" : "○"}
-                </button>
+                ${local
+                  ? `<span class="w-8 h-8 rounded-full border-2 border-slate-200 text-slate-300 flex items-center justify-center text-sm" title="Saved locally">○</span>`
+                  : `<button class="tick-btn w-8 h-8 rounded-full border-2 ${b.completed ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 text-slate-400"} flex items-center justify-center text-sm font-bold hover:border-emerald-400 transition"
+                      data-bid="${b.id}" data-completed="${b.completed ? 1 : 0}" title="Toggle test drive taken">
+                      ${b.completed ? "✓" : "○"}
+                    </button>`
+                }
               </td>
               <td class="py-3 px-4 font-bold text-slate-900">${b.name}<br>
                 <span class="text-[10px] text-slate-400 font-normal">${b.phone}</span></td>
-              <td class="py-3 px-4 text-brand-600 font-semibold">Vehicle #${b.vehicle_id}</td>
+              <td class="py-3 px-4 text-brand-600 font-semibold">${vName}</td>
               <td class="py-3 px-4 text-slate-600">${b.city}${b.branch ? ` · ${b.branch}` : ""}</td>
               <td class="py-3 px-4 font-semibold">${b.preferred_date}</td>
               <td class="py-3 px-4">
-                <input type="text" class="officer-input border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 text-slate-800 w-32 focus:outline-none focus:border-brand-500"
-                  value="${b.sales_officer || ""}" placeholder="Assign officer" data-bid="${b.id}">
+                ${local
+                  ? `<span class="text-slate-400">${b.sales_officer || "—"}</span>`
+                  : `<input type="text" class="officer-input border border-slate-200 rounded-lg px-2 py-1 text-xs bg-slate-50 text-slate-800 w-32 focus:outline-none focus:border-brand-500"
+                      value="${b.sales_officer || ""}" placeholder="Assign officer" data-bid="${b.id}">`
+                }
               </td>
               <td class="py-3 px-4 text-slate-400">${new Date(b.ts * 1000).toLocaleString("en-IN", {dateStyle:"short",timeStyle:"short"})}</td>
               <td class="py-3 px-4 text-right">
-                <span class="${b.completed ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"} text-[10px] font-bold px-2.5 py-1 rounded-full">
-                  ${b.completed ? "Taken" : "Pending"}
+                <span class="${b.completed ? "bg-emerald-100 text-emerald-800" : local ? "bg-blue-50 text-blue-700" : "bg-amber-100 text-amber-800"} text-[10px] font-bold px-2.5 py-1 rounded-full">
+                  ${b.completed ? "Taken" : local ? "Booked" : "Pending"}
                 </span>
               </td>
-            </tr>`).join("")}
+            </tr>`;
+          }).join("")}
         </tbody>
       </table>`;
 
-    // Tick toggle
+    // Tick toggle (server bookings only)
     container.querySelectorAll(".tick-btn").forEach(btn => {
       btn.onclick = async () => {
         const completed = btn.dataset.completed !== "1";
