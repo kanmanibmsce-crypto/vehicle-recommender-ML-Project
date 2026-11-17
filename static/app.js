@@ -348,7 +348,7 @@ async function runAIMatch() {
   $("#parsed-tags-row").innerHTML = "";
   try {
     const prefs = getPreferences();
-    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 13 });
+    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 20 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     renderVehicleCards(out);
@@ -369,7 +369,7 @@ async function runNLPSearch() {
   switchTab("recommender");
   $("#results-meta").textContent = "Searching…";
   try {
-    const out = await api("/api/search", { user_id: USER_ID, q, k: 13 });
+    const out = await api("/api/search", { user_id: USER_ID, q, k: 20 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     if (out.parsed_tags?.length) {
@@ -405,17 +405,43 @@ function renderVehicleCards(out) {
     return;
   }
 
-  // Keep only the best-scoring variant per model (catalog has up to 13 variants of same model).
-  const seenModels = new Set();
-  const dedupedResults = out.results.filter(r => {
-    const key = r.vehicle.model.toLowerCase().trim();
-    if (seenModels.has(key)) return false;
-    seenModels.add(key);
+  // Normalise colour-variant model names so e.g. "Taisor (White Board)" and
+  // "Taisor (Yellow Board)" collapse to the same dedup key.
+  function modelKey(model) {
+    return model.toLowerCase()
+      .replace(/\s*\(white board\)/g, "").replace(/\s*\(yellow board\)/g, "")
+      .replace(/\s*\(other color\)/g, "").replace(/\s+white$/g, "")
+      .trim();
+  }
+
+  // First pass: 1 variant per model
+  const seenOnce = new Map();
+  const dedupStrict = out.results.filter(r => {
+    const k = modelKey(r.vehicle.model);
+    if (seenOnce.has(k)) return false;
+    seenOnce.set(k, 1);
     return true;
   });
 
+  // If fewer than 5 unique models, allow a second variant per model so the
+  // user sees more options (narrow budget = limited catalog).
+  let dedupedResults = dedupStrict;
+  if (dedupStrict.length < 5) {
+    const seenTwice = new Map();
+    dedupedResults = out.results.filter(r => {
+      const k = modelKey(r.vehicle.model);
+      const count = seenTwice.get(k) || 0;
+      if (count >= 2) return false;
+      seenTwice.set(k, count + 1);
+      return true;
+    });
+  }
+
   const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
-  $("#results-meta").textContent = `${dedupedResults.length} matches from ${out.candidates_after_filters} vehicles${personal}`;
+  const limitedNote = dedupedResults.length < 5 && out.candidates_after_filters > 0
+    ? " · try widening your budget or removing feature filters to see more"
+    : "";
+  $("#results-meta").textContent = `${dedupedResults.length} matches from ${out.candidates_after_filters} vehicles${personal}${limitedNote}`;
 
   dedupedResults.forEach((r, idx) => {
     const v = r.vehicle;
