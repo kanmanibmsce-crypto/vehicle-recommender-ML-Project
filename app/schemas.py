@@ -97,6 +97,8 @@ class SearchResponse(RecommendResponse):
 class CustomerProfileIn(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     sub: str = Field("", max_length=200)
+    phone: str = Field("", max_length=20)
+    enquiry_date: str = Field("", max_length=10)
     budgetMin: float = Field(0, ge=0)
     budgetMax: float = Field(100, gt=0)
     fuels: list[str] = Field(default_factory=list)

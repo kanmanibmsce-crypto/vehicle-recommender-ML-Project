@@ -1171,8 +1171,10 @@ async function saveNewProfile(e) {
   const feats = [...document.querySelectorAll("[data-np-feat]:checked")].map(x => x.dataset.npFeat);
   const prios = [...document.querySelectorAll("[data-np-prio]:checked")].map(x => x.dataset.npPrio);
   const profile = {
-    name:      $("#np-name").value.trim(),
-    sub:       $("#np-sub").value.trim(),
+    name:         $("#np-name").value.trim(),
+    sub:          $("#np-sub").value.trim(),
+    phone:        $("#np-phone").value.trim(),
+    enquiry_date: $("#np-enq-date").value,
     budgetMin: parseFloat($("#np-budget-min").value || 0),
     budgetMax: parseFloat($("#np-budget-max").value || 25),
     fuels:     [...npFuels],
@@ -1205,6 +1207,8 @@ function showProfileDetail(p) {
 
   $("#pd-name").textContent = p.name;
   $("#pd-sub").textContent  = p.sub || "Customer profile";
+  $("#pd-phone").textContent = p.phone || "—";
+  $("#pd-enq-date").textContent = p.enquiry_date || "—";
   $("#pd-budget").textContent = `₹${p.budgetMin ?? 0} L – ₹${p.budgetMax ?? "—"} L`;
 
   const fuelsEl = $("#pd-fuels");
