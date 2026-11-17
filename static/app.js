@@ -348,7 +348,7 @@ async function runAIMatch() {
   $("#parsed-tags-row").innerHTML = "";
   try {
     const prefs = getPreferences();
-    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 20 });
+    const out = await api("/api/recommend", { user_id: USER_ID, preferences: prefs, k: 30 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     renderVehicleCards(out);
@@ -369,7 +369,7 @@ async function runNLPSearch() {
   switchTab("recommender");
   $("#results-meta").textContent = "Searching…";
   try {
-    const out = await api("/api/search", { user_id: USER_ID, q, k: 20 });
+    const out = await api("/api/search", { user_id: USER_ID, q, k: 30 });
     lastRecId = out.recommendation_id;
     currentResults = out.results;
     if (out.parsed_tags?.length) {
@@ -414,28 +414,18 @@ function renderVehicleCards(out) {
       .trim();
   }
 
-  // First pass: 1 variant per model
-  const seenOnce = new Map();
-  const dedupStrict = out.results.filter(r => {
-    const k = modelKey(r.vehicle.model);
-    if (seenOnce.has(k)) return false;
-    seenOnce.set(k, 1);
+  // Show up to MAX_PER_MODEL variants per model so users can compare
+  // trim levels (e.g. Glanza S / G / V at different price points).
+  // Cap at 3 to avoid flooding the list with 13 Glanza variants.
+  const MAX_PER_MODEL = 3;
+  const seenCount = new Map();
+  const dedupedResults = out.results.filter(r => {
+    const key = modelKey(r.vehicle.model);
+    const n = seenCount.get(key) || 0;
+    if (n >= MAX_PER_MODEL) return false;
+    seenCount.set(key, n + 1);
     return true;
   });
-
-  // If fewer than 5 unique models, allow a second variant per model so the
-  // user sees more options (narrow budget = limited catalog).
-  let dedupedResults = dedupStrict;
-  if (dedupStrict.length < 5) {
-    const seenTwice = new Map();
-    dedupedResults = out.results.filter(r => {
-      const k = modelKey(r.vehicle.model);
-      const count = seenTwice.get(k) || 0;
-      if (count >= 2) return false;
-      seenTwice.set(k, count + 1);
-      return true;
-    });
-  }
 
   const personal = out.used_implicit_profile ? " · personalised using your activity" : "";
   const limitedNote = dedupedResults.length < 5 && out.candidates_after_filters > 0
