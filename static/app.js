@@ -692,6 +692,7 @@ async function confirmBooking(e) {
       vehicle_id:       payload.vehicle_id,
       vehicle_name:     bookingTarget.vehicleName,
       vehicle_img:      bookingImg,
+      vehicle_price:    bv?.price_lakh ?? null,
       name:             payload.name,
       phone:            payload.phone,
       city:             payload.city,
@@ -784,13 +785,15 @@ async function loadLeadInbox() {
       api("/api/vehicles").catch(() => []),
     ]);
 
-    // Vehicle lookup maps  id → name / image URL
+    // Vehicle lookup maps  id → name / image URL / price
     const vMap = {};
     const vImgMap = {};
+    const vPriceMap = {};
     vehicles.forEach(v => {
       vMap[v.id] = `${v.make} ${v.model} ${v.variant || ""}`.trim();
       const toyotaImg = v.make === "Toyota" ? TOYOTA_IMAGES[v.model.toLowerCase().trim()] : null;
       vImgMap[v.id] = toyotaImg || (v.fuel === "electric" ? ELECTRIC_IMG : (BODY_IMAGES[v.body_type] || BODY_IMAGES.compact_suv));
+      vPriceMap[v.id] = v.price_lakh;
     });
 
     // Merge: server is authoritative; fill gaps from localStorage (Vercel cold-start fix).
@@ -821,8 +824,9 @@ async function loadLeadInbox() {
         </thead>
         <tbody class="divide-y divide-slate-100">
           ${bookings.map(b => {
-            const vName = b.vehicle_name || vMap[b.vehicle_id] || `Vehicle #${b.vehicle_id}`;
-            const vImg  = b.vehicle_img  || vImgMap[b.vehicle_id] || "";
+            const vName  = b.vehicle_name  || vMap[b.vehicle_id]   || `Vehicle #${b.vehicle_id}`;
+            const vImg   = b.vehicle_img   || vImgMap[b.vehicle_id] || "";
+            const vPrice = b.vehicle_price != null ? b.vehicle_price : vPriceMap[b.vehicle_id];
             const local = isLocal(b);
             return `
             <tr class="hover:bg-slate-50 transition${local ? " opacity-80" : ""}" data-bid="${b.id}">
@@ -842,7 +846,10 @@ async function loadLeadInbox() {
                   ${vImg ? `<img src="${vImg}" alt="${vName}"
                       class="w-14 h-10 object-cover rounded-lg shrink-0 bg-slate-100"
                       onerror="this.style.display='none'">` : ""}
-                  <span class="text-brand-600 font-semibold text-xs leading-tight">${vName}</span>
+                  <div>
+                    <span class="text-brand-600 font-semibold text-xs leading-tight block">${vName}</span>
+                    ${vPrice != null ? `<span class="text-emerald-600 font-bold text-[11px]">₹${Number(vPrice).toFixed(2)} L</span>` : ""}
+                  </div>
                 </div>
               </td>
               <td class="py-3 px-4 text-slate-600">${b.city}${b.branch ? ` · ${b.branch}` : ""}</td>
