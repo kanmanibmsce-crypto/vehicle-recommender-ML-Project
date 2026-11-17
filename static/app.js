@@ -110,13 +110,71 @@ const LEAD_PROFILES = {
   },
 };
 
+/* ── Auth ─────────────────────────────────────────────────────────────── */
+function getToken() { try { return localStorage.getItem("dm_token"); } catch (_) { return null; } }
+function setToken(t) { try { localStorage.setItem("dm_token", t); } catch (_) {} }
+function clearToken() { try { localStorage.removeItem("dm_token"); localStorage.removeItem("dm_auth_user"); } catch (_) {} }
+function getAuthUser() { try { return localStorage.getItem("dm_auth_user") || "admin"; } catch (_) { return "admin"; } }
+function setAuthUser(u) { try { localStorage.setItem("dm_auth_user", u); } catch (_) {} }
+
+function showLoginOverlay() {
+  $("#login-overlay").classList.remove("hidden");
+  $("#app-shell").classList.add("hidden");
+}
+function hideLoginOverlay() {
+  $("#login-overlay").classList.add("hidden");
+  $("#app-shell").classList.remove("hidden");
+}
+
+function togglePwdVisibility() {
+  const inp = $("#login-password"), icon = $("#pwd-eye");
+  if (inp.type === "password") { inp.type = "text"; icon.classList.replace("fa-eye","fa-eye-slash"); }
+  else { inp.type = "password"; icon.classList.replace("fa-eye-slash","fa-eye"); }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const btn = $("#login-btn"), btnText = $("#login-btn-text"), spinner = $("#login-spinner");
+  const errBox = $("#login-error");
+  errBox.classList.add("hidden");
+  btn.disabled = true; btnText.textContent = "Signing in…"; spinner.classList.remove("hidden");
+  try {
+    const data = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: $("#login-username").value.trim(), password: $("#login-password").value }),
+    }).then(r => r.ok ? r.json() : r.json().then(d => Promise.reject(d.detail || "Invalid credentials")));
+    setToken(data.access_token);
+    setAuthUser(data.username);
+    hideLoginOverlay();
+    initApp();
+  } catch (err) {
+    errBox.textContent = typeof err === "string" ? err : "Invalid username or password";
+    errBox.classList.remove("hidden");
+  } finally {
+    btn.disabled = false; btnText.textContent = "Sign In"; spinner.classList.add("hidden");
+  }
+}
+
+function logout() {
+  clearToken();
+  showLoginOverlay();
+  $("#login-username").value = "";
+  $("#login-password").value = "";
+  $("#login-error").classList.add("hidden");
+}
+
 /* ── API helper ───────────────────────────────────────────────────────── */
 async function api(path, body, method) {
   const m = method || (body ? "POST" : "GET");
+  const token = getToken();
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(path, body !== undefined && body !== null
-    ? { method: m, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-    : undefined
+    ? { method: m, headers, body: JSON.stringify(body) }
+    : { headers }
   );
+  if (res.status === 401) { logout(); throw new Error("Session expired — please sign in again"); }
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
     const msg = Array.isArray(d.detail)
@@ -1059,7 +1117,10 @@ function loadProfileFromObj(p) {
 }
 
 /* ── Init ─────────────────────────────────────────────────────────────── */
-async function init() {
+async function initApp() {
+  const user = getAuthUser();
+  const userEl = document.getElementById("sidebar-username");
+  if (userEl) userEl.textContent = user.charAt(0).toUpperCase() + user.slice(1);
   try {
     const o = await api("/api/options");
     o.features.forEach(f => { featuresMap[f.key] = f.label; });
@@ -1076,4 +1137,13 @@ async function init() {
   }
 }
 
-init();
+/* ── Bootstrap: check saved token before showing app ─────────────────── */
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("login-form").addEventListener("submit", handleLogin);
+  if (getToken()) {
+    hideLoginOverlay();
+    initApp();
+  } else {
+    showLoginOverlay();
+  }
+});

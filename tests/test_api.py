@@ -6,7 +6,10 @@ from app.main import create_app
 
 @pytest.fixture
 def client(tmp_path):
-    return TestClient(create_app(db_path=tmp_path / "events.db"))
+    c = TestClient(create_app(db_path=tmp_path / "events.db"))
+    token = c.post("/api/login", json={"username": "nandi", "password": "Toyota@123"}).json()["access_token"]
+    c.headers.update({"Authorization": f"Bearer {token}"})
+    return c
 
 
 BODY = {"user_id": "test-user", "k": 5,

@@ -9,23 +9,34 @@ import json
 import re
 import uuid
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config as C
+from .auth import create_token, is_public_path, verify_token
 from .events import EventStore
 from .query_parser import parse_query
 from .recommender import Recommender, _clean
 from .schemas import (CustomerProfile, CustomerProfileIn, EventIn,
-                      Preferences, RecommendRequest, RecommendResponse,
-                      SearchRequest, SearchResponse, TestDriveBookingIn,
-                      TestDriveBookingOut, TestDriveUpdateIn)
+                      LoginIn, LoginOut, Preferences, RecommendRequest,
+                      RecommendResponse, SearchRequest, SearchResponse,
+                      TestDriveBookingIn, TestDriveBookingOut, TestDriveUpdateIn)
 
+_PROFILES_COMMITTED = C.BASE_DIR / "data" / "customer_profiles.json"
+# On Vercel the checkout dir is read-only; write profiles to /tmp instead.
 _PROFILES_PATH = C.BASE_DIR / "data" / "customer_profiles.json"
+if C._ON_VERCEL:
+    import os as _os
+    _PROFILES_PATH = _os.path.join("/tmp", "customer_profiles.json")  # type: ignore[assignment]
+    _PROFILES_PATH = type(_PROFILES_COMMITTED)(_PROFILES_PATH)
 
 
 def _load_profiles() -> list[dict]:
+    # On Vercel, seed /tmp from the committed file if it hasn't been written yet.
+    if C._ON_VERCEL and not _PROFILES_PATH.exists() and _PROFILES_COMMITTED.exists():
+        import shutil
+        shutil.copy(_PROFILES_COMMITTED, _PROFILES_PATH)
     if _PROFILES_PATH.exists():
         return json.loads(_PROFILES_PATH.read_text(encoding="utf-8"))
     return []
@@ -50,6 +61,21 @@ def create_app(db_path=C.DB_PATH) -> FastAPI:
     store = EventStore(db_path)
     rec = Recommender(store=store)
     app.state.store, app.state.rec = store, rec
+
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        if is_public_path(request.url.path):
+            return await call_next(request)
+        token = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+        if not token or not verify_token(token):
+            return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+        return await call_next(request)
+
+    @app.post("/api/login", response_model=LoginOut)
+    def login(creds: LoginIn):
+        if creds.username != C.ADMIN_USER or creds.password != C.ADMIN_PASSWORD:
+            raise HTTPException(401, "Invalid username or password")
+        return LoginOut(access_token=create_token(creds.username), username=creds.username)
 
     @app.get("/api/health")
     def health():

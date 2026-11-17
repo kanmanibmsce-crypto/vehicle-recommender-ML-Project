@@ -3,11 +3,15 @@
 Everything a product/data person may want to tune lives here, so experiments
 (A/B tests) only change this file.
 """
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "vehicles.csv"
-DB_PATH = BASE_DIR / "data" / "events.db"
+
+# Vercel's filesystem is read-only; use /tmp for writable files.
+_ON_VERCEL = bool(os.environ.get("VERCEL"))
+DB_PATH = Path("/tmp/events.db") if _ON_VERCEL else BASE_DIR / "data" / "events.db"
 
 # --- Feature vocabulary (fixed so vectors are stable across restarts) -------
 BODY_TYPES = ["hatchback", "sedan", "micro_suv", "compact_suv", "midsize_suv", "large_suv", "mpv"]
@@ -61,3 +65,10 @@ ALPHA_MIN = 0.55
 ALPHA_EVENTS_FOR_MIN = 15
 
 VALID_EVENT_TYPES = {"impression", "click", "save", "compare", "test_drive", "purchase", "feedback"}
+
+# --- Auth (single-admin login) -------------------------------------------
+ADMIN_USER = os.environ.get("ADMIN_USER", "nandi")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "Toyota@123")
+JWT_SECRET = os.environ.get("JWT_SECRET", "change-me-in-production-use-env-var")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRY_HOURS = 8
