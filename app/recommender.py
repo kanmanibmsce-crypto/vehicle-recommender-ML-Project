@@ -79,6 +79,8 @@ class Recommender:
     def hard_filter(self, prefs) -> np.ndarray:
         df = self.df
         mask = df["price_lakh"] <= prefs.budget_max * (1 + C.BUDGET_TOLERANCE)
+        if prefs.budget_min > 0:
+            mask &= df["price_lakh"] >= prefs.budget_min
         if prefs.min_seats:
             mask &= df["seats"] >= prefs.min_seats
         if prefs.fuel_strict and prefs.fuels:
